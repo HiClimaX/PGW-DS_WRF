@@ -9,7 +9,7 @@ PANGEO_CATALOG_URL = "https://storage.googleapis.com/cmip6/pangeo-cmip6.json"
 # GLADE_CATALOG_URL = "https://raw.githubusercontent.com/NCAR/intake-esm-datastore/refs/heads/main/catalogs/glade-cmip6.json"
 
 
-def natural_sort(l: Iterable[str]) -> list[str]:
+def natural_sort(arr: Iterable[str], /) -> list[str]:
     """
     Sort names like r1i1p1f1, r1i2p1f1 in a natural (numeric) order.
     - r1: Realization (initial condition run),
@@ -22,9 +22,13 @@ def natural_sort(l: Iterable[str]) -> list[str]:
     :param l: list of names to be sorted
     """
 
-    convert = lambda text: int(text) if text.isdigit() else text.lower()
-    alphanum_key = lambda key: tuple(convert(c) for c in re.split(r"(\d+)", key))
-    return sorted(l, key=alphanum_key)
+    def convert(text):
+        return int(text) if text.isdigit() else text.lower()
+
+    def alphanum_key(key):
+        return tuple(convert(c) for c in re.split(r"(\d+)", key))
+
+    return sorted(arr, key=alphanum_key)
 
 
 def to_netcdf(ds: xr.Dataset, ofile: str | Path):

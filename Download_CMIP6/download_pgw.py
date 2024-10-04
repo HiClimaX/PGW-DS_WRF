@@ -13,7 +13,6 @@ import concurrent.futures
 from pathlib import Path
 
 import intake
-import netcdf_util
 import numpy as np
 import pandas as pd
 import util
