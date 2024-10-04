@@ -16,9 +16,10 @@ import intake
 import netcdf_util
 import numpy as np
 import pandas as pd
+import util
 import xarray as xr
 from tqdm.autonotebook import tqdm
-from util import CATALOG_URL, natural_sort
+from util import PANGEO_CATALOG_URL
 
 
 # %%
@@ -52,7 +53,7 @@ def download_files(
         print("*** No data found for", var, exp, sid)
         return False
 
-    member_ids = natural_sort(models.df.member_id.values)
+    member_ids = util.natural_sort(models.df.member_id.values)
 
     # get the first one only then seach again
     first_member_id = member_ids[0]
@@ -116,24 +117,10 @@ def download_files(
             ofile = output_file_name(key)
             tmp_ofile = ofile.with_suffix(".tmp.nc")
 
-            # Compression
-            encoding = {
-                var_name: {
-                    "zlib": True,
-                    "complevel": 1,
-                    "chunksizes": netcdf_util.chunk_shape_nD(
-                        data.shape, chunkSize=64 * 2**10
-                    ),
-                }
-                for var_name, data in month_mean.data_vars.items()
-            }
-
             # Save to temporary file first, and then rename to output file to
             # avoid regarding corrupted file due to sudden termination as
             # complete file.
-            month_mean.to_netcdf(
-                tmp_ofile, format="NETCDF4_CLASSIC", engine="netcdf4", encoding=encoding
-            )
+            util.to_netcdf(month_mean, tmp_ofile)
             tmp_ofile.rename(ofile)
 
     except Exception as e:
@@ -167,7 +154,13 @@ def download_data(
             for exp in experiments:
                 for var in variables:
                     future = executor.submit(
-                        download_files, CATALOG_URL, sid, exp, var, start_year, end_year
+                        download_files,
+                        PANGEO_CATALOG_URL,
+                        sid,
+                        exp,
+                        var,
+                        start_year,
+                        end_year,
                     )
                     futures.append(future)
                     status.append(

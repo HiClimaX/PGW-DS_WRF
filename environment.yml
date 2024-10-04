@@ -13,3 +13,4 @@ dependencies:
   - gcsfs
   - pre-commit
   - tqdm
+  - esgf-pyclient

@@ -1,7 +1,12 @@
 import re
+from pathlib import Path
 from typing import Iterable
 
-CATALOG_URL = "https://storage.googleapis.com/cmip6/pangeo-cmip6.json"
+import netcdf_util
+import xarray as xr
+
+PANGEO_CATALOG_URL = "https://storage.googleapis.com/cmip6/pangeo-cmip6.json"
+# GLADE_CATALOG_URL = "https://raw.githubusercontent.com/NCAR/intake-esm-datastore/refs/heads/main/catalogs/glade-cmip6.json"
 
 
 def natural_sort(l: Iterable[str]) -> list[str]:
@@ -18,5 +23,27 @@ def natural_sort(l: Iterable[str]) -> list[str]:
     """
 
     convert = lambda text: int(text) if text.isdigit() else text.lower()
-    alphanum_key = lambda key: [convert(c) for c in re.split("([0-9]+)", key)]
+    alphanum_key = lambda key: tuple(convert(c) for c in re.split(r"(\d+)", key))
     return sorted(l, key=alphanum_key)
+
+
+def to_netcdf(ds: xr.Dataset, ofile: str | Path):
+    """
+    Write an xarray dataset to a netCDF file.
+
+    :param ds: xarray dataset
+    :param ofile: output file name
+    """
+    encoding = {
+        var_name: {
+            "zlib": True,
+            "complevel": 1,
+            "chunksizes": netcdf_util.chunk_shape_nD(data.shape, chunkSize=64 * 2**10),
+        }
+        for var_name, data in ds.data_vars.items()
+    }
+
+    # Save to temporary file first, and then rename to output file to
+    # avoid regarding corrupted file due to sudden termination as
+    # complete file.
+    ds.to_netcdf(ofile, format="NETCDF4_CLASSIC", engine="netcdf4", encoding=encoding)
