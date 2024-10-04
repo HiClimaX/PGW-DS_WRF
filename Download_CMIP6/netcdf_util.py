@@ -8,7 +8,7 @@ import numpy as np
 import numpy.ma as ma
 
 
-def numVals(shape):
+def _numVals(shape):
     """Return number of values in chunk of specified shape, given by a list of dimension lengths.
 
     shape -- list of variable dimension sizes"""
@@ -17,7 +17,7 @@ def numVals(shape):
     return reduce(operator.mul, shape)
 
 
-def cascadeRounding(array):
+def _cascadeRounding(array):
     """Implement cascase rounding
     http://stackoverflow.com/questions/792460/how-to-round-floats-to-integers-while-preserving-their-sum
     """
@@ -46,7 +46,7 @@ def cascadeRounding(array):
     return rounded_array
 
 
-def calcChunkShape(chunkVol, varShape):
+def _calcChunkShape(chunkVol, varShape):
     """
     Calculate a chunk shape for a given volume/area for the dimensions in varShape.
 
@@ -55,9 +55,9 @@ def calcChunkShape(chunkVol, varShape):
     """
 
     return np.array(
-        cascadeRounding(
+        _cascadeRounding(
             np.asarray(varShape)
-            * (chunkVol / float(numVals(varShape))) ** (1.0 / len(varShape))
+            * (chunkVol / float(_numVals(varShape))) ** (1.0 / len(varShape))
         ),
         dtype="int",
     )
@@ -84,11 +84,11 @@ def chunk_shape_nD(varShape, valSize=4, chunkSize=4096, minDim=1):
     varShapema = ma.array(varShape)
 
     chunkVals = min(
-        chunkSize / float(valSize), numVals(varShapema)
+        chunkSize / float(valSize), _numVals(varShapema)
     )  # ideal number of values in a chunk
 
     # Make an ideal chunk shape array
-    chunkShape = ma.array(calcChunkShape(chunkVals, varShapema), dtype=int)
+    chunkShape = ma.array(_calcChunkShape(chunkVals, varShapema), dtype=int)
 
     # Short circuit for 1D arrays. Logic below unecessary & can have divide by zero
     if len(varShapema) == 1:
@@ -97,8 +97,8 @@ def chunk_shape_nD(varShape, valSize=4, chunkSize=4096, minDim=1):
     # And a copy where we'll store our final values
     chunkShapeFinal = ma.masked_all(chunkShape.shape, dtype=int)
 
-    if chunkVals < numVals(np.minimum(varShapema, minDim)):
-        while chunkVals < numVals(np.minimum(varShapema, minDim)):
+    if chunkVals < _numVals(np.minimum(varShapema, minDim)):
+        while chunkVals < _numVals(np.minimum(varShapema, minDim)):
             minDim -= 1
         sys.stderr.write("Mindim too large for variable, reduced to : %d\n" % minDim)
 
@@ -118,7 +118,7 @@ def chunk_shape_nD(varShape, valSize=4, chunkSize=4096, minDim=1):
 
         # Have we fixed any dimensions and filled them in chunkShapeFinal?
         if chunkShapeFinal.count() > 0:
-            chunkCount = numVals(chunkShapeFinal[~chunkShapeFinal.mask])
+            chunkCount = _numVals(chunkShapeFinal[~chunkShapeFinal.mask])
         else:
             if lastChunkCount == -1:
                 # Haven't modified initial guess, break out of
@@ -127,7 +127,7 @@ def chunk_shape_nD(varShape, valSize=4, chunkSize=4096, minDim=1):
 
         if chunkCount != lastChunkCount and len(varShapema[~chunkShape.mask]) > 0:
             # Recalculate chunkShape array, with reduced dimensions
-            chunkShape[~chunkShape.mask] = calcChunkShape(
+            chunkShape[~chunkShape.mask] = _calcChunkShape(
                 chunkVals / chunkCount, varShapema[~chunkShape.mask]
             )
             lastChunkCount = chunkCount

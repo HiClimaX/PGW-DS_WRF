@@ -10,40 +10,15 @@
 
 # %%
 import concurrent.futures
-import re
 from pathlib import Path
-from typing import Iterable
 
-import chunk_util
 import intake
+import netcdf_util
 import numpy as np
 import pandas as pd
 import xarray as xr
 from tqdm.autonotebook import tqdm
-
-# %%
-# Information of all CMIP6 files that one can download from intake esm data store
-url = "https://raw.githubusercontent.com/NCAR/intake-esm-datastore/master/catalogs/pangeo-cmip6.json"
-url = "https://storage.googleapis.com/cmip6/pangeo-cmip6.json"
-
-
-# %%
-def natural_sort(l: Iterable[str]) -> list[str]:
-    """
-    Sort names like r1i1p1f1, r1i2p1f1 in a natural (numeric) order.
-    - r1: Realization (initial condition run),
-    - i1: Initialization method,
-    - p1: Physical parameters,
-    - f1: External forcings.
-
-    Numeric order means that r1i1p1f1 < r2i1p1f1 < r11i1p1f1.
-
-    :param l: list of names to be sorted
-    """
-
-    convert = lambda text: int(text) if text.isdigit() else text.lower()
-    alphanum_key = lambda key: [convert(c) for c in re.split("([0-9]+)", key)]
-    return sorted(l, key=alphanum_key)
+from util import CATALOG_URL, natural_sort
 
 
 # %%
@@ -146,7 +121,7 @@ def download_files(
                 var_name: {
                     "zlib": True,
                     "complevel": 1,
-                    "chunksizes": chunk_util.chunk_shape_nD(
+                    "chunksizes": netcdf_util.chunk_shape_nD(
                         data.shape, chunkSize=64 * 2**10
                     ),
                 }
@@ -170,9 +145,9 @@ def download_files(
 
 # %%
 # Example usage
-# download_files(url, "EC-Earth3", "historical", "tas", 1995, 2014)
-# download_files(url, "EC-Earth3", "historical", "ta", 1995, 2014)
-# download_files(url, "MPI-ESM1-2-HR", "historical", "tas", 1995, 2014)
+# download_files(CATALOG_URL, "EC-Earth3", "historical", "tas", 1995, 2014)
+# download_files(CATALOG_URL, "EC-Earth3", "historical", "ta", 1995, 2014)
+# download_files(CATALOG_URL, "MPI-ESM1-2-HR", "historical", "tas", 1995, 2014)
 
 
 # %%
@@ -192,7 +167,7 @@ def download_data(
             for exp in experiments:
                 for var in variables:
                     future = executor.submit(
-                        download_files, url, sid, exp, var, start_year, end_year
+                        download_files, CATALOG_URL, sid, exp, var, start_year, end_year
                     )
                     futures.append(future)
                     status.append(
