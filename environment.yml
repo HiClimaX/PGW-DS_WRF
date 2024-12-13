@@ -2,6 +2,10 @@ name: dv-pgw
 channels:
   - defaults
 dependencies:
+  - pip
+  - pip:
+    - fire
+  - parallel
   - intake
   - python=3.12
   - ipykernel
