@@ -7,6 +7,7 @@ import numpy as np
 import pywinter.winter as pyw
 import xarray as xr
 import xesmf as xe
+from tqdm import tqdm
 
 # %%
 # A map from WPS intermediate variable name to CMIP6 variable name
@@ -57,6 +58,8 @@ def calculate_deltas(
 
     deltas = {}
 
+    pbar = tqdm(desc="Calculating deltas", total=len(variables) * len(source_ids))
+
     for variable in variables:
         diffs = []
         for source_id in source_ids:
@@ -78,10 +81,14 @@ def calculate_deltas(
 
             diffs.append(diff)
 
+            pbar.update(1)
+
         mean_diff = diffs[0].copy(data=np.nanmean(diffs, axis=0))
         mean_diff = mean_diff.fillna(0)
 
         deltas[variable] = mean_diff
+
+    pbar.close()
 
     return deltas
 
@@ -116,8 +123,13 @@ def apply_pgw_delta(wps_inter_filepath, deltas, dst_dir, var_map):
         if varname in ["SM", "ST", "SOILM", "SOILT"]:  # soil variables
             field = pyw.Vsl(varname, values, var.level)
         elif isinstance(var.level, str):  # 2D variables
+            out_varname = varname
+            if varname.endswith("2M"):
+                out_varname = varname[:-2]
+            elif varname.endswith("10M"):
+                out_varname = varname[:-3]
             field = pyw.V2d(
-                varname,
+                out_varname,
                 values,
                 var.general["DESC"],
                 var.general["UNITS"],
