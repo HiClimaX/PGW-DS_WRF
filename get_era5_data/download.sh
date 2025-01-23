@@ -5,7 +5,7 @@ set -eou pipefail
 DATADIR=data/
 
 DATE1=20170419
-DATE2=20170430
+DATE2=20170419
 Nort=60
 West=80
 Sout=15

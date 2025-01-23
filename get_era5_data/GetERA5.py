@@ -32,6 +32,8 @@ SINGLE_LEVEL_PARAMS = {
         "sea_surface_temperature",
         "skin_temperature",
         "snow_depth",
+        "snow_density",
+        "geopotential",
         "soil_temperature_level_1",
         "soil_temperature_level_2",
         "soil_temperature_level_3",
@@ -53,7 +55,6 @@ PRESSURE_LEVELS_PARAMS = {
     "variable": [
         "geopotential",
         "relative_humidity",
-        "specific_humidity",
         "temperature",
         "u_component_of_wind",
         "v_component_of_wind",
@@ -130,13 +131,17 @@ def download(
         print(level, date1, date2, area, output_file)
         return
 
+    tmp_output_file = output_file + ".tmp"
+
     c = cdsapi.Client()
 
     # This should work, but some how it's very unstable recently
-    # c.retrieve(product, params, output_file)
+    # c.retrieve(product, params, tmp_output_file)
 
     res = c.retrieve(product, params)
-    download_file(res.location, output_file, res.content_length)
+    download_file(res.location, tmp_output_file, res.content_length)
+
+    os.rename(tmp_output_file, output_file)
 
 
 if __name__ == "__main__":
