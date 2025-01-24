@@ -1,6 +1,6 @@
 name: dv-pgw
 channels:
-  - defaults
+  - conda-forge
 dependencies:
   - pip
   - pip:

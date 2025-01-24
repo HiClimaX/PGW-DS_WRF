@@ -1,6 +1,5 @@
 # %%
 import re
-from pathlib import Path
 
 import fire
 
@@ -29,12 +28,21 @@ end_date = pd.Timestamp("2010-02-01")
 
 # %%
 def get_download_urls(
-    variable_id, source_id, experiment_id, start_date, end_date
+    variable_id, source_id, experiment_id, start_date, end_date, exclude_nodes: str = ""
 ) -> list[str]:
+    exclude_nodes_set = set(exclude_nodes.split(","))
+
+    def filter_node(results):
+        return [
+            result
+            for result in results
+            if result.json["data_node"] not in exclude_nodes_set
+        ]
+
     start_date = pd.Timestamp(start_date)
     end_date = pd.Timestamp(end_date)
     conn = SearchConnection("https://esgf.ceda.ac.uk/esg-search", distrib=True)
-    facets = "project,experiment_id,variable_id,source_id,member_id,table_id,frequency"
+    facets = "project,experiment_id,variable_id,source_id,member_id,table_id,frequency,data_node"
 
     ctx = conn.new_context(
         project="CMIP6",
@@ -46,13 +54,13 @@ def get_download_urls(
         latest=True,
         source_id=source_id,
     )
-    search_results = ctx.search()
+    search_results = filter_node(ctx.search())
     members = util.natural_sort(
         np.unique([result.json["member_id"][0] for result in search_results])
     )
 
     ctx_first = ctx.constrain(member_id=members[0])
-    search_results_first_member = ctx_first.search()
+    search_results_first_member = filter_node(ctx_first.search())
     result = search_results_first_member[0]
     files: list[pyesgf.search.results.FileResult] = result.file_context().search()
 
@@ -72,4 +80,4 @@ if __name__ == "__main__":
     exit(0)
 
 # %%
-get_download_urls("ta", "MIROC6", "ssp370", start_date, end_date)
+get_download_urls("hus", "MIROC6", "ssp370", start_date, end_date)
