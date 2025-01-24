@@ -63,6 +63,8 @@ def calculate_deltas(
     for variable in variables:
         diffs = []
         for source_id in source_ids:
+            pbar.set_postfix_str(f"{variable}, {source_id}")
+
             present_dir = download_dir / source_id / "historical"
             (present_file,) = present_dir.glob(f"{variable}_*{present}.nc")
             present_ds = xr.open_dataset(present_file)[variable]
