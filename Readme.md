@@ -41,7 +41,7 @@ python create_pgw_wps_interm.py
 
 4. Run other WRF steps (e.g., `metgrid.exe`) as usual.
 
-<!-- ## Test run with WRF
+## Test run with WRF
 
 In Run_WRF/
 
@@ -52,4 +52,3 @@ Run_WRF/Run_PGW.ipynb
 ## Relevant data are saved to:
 
 https://drive.google.com/drive/folders/1-DgBXOMXOd7CokSxHDvA2XrcZtOSoWfj?usp=drive_link
- -->
