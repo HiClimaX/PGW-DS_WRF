@@ -113,6 +113,7 @@ def apply_pgw_delta(wps_inter_filepath, deltas, dst_dir, var_map):
     prefix, date = wps_inter_filepath.name.split(":")
     month = int(date.split("-")[1])
 
+    _logger.info(f"Processing {wps_inter_filepath}")
     inter_ds = pyw.rinter(wps_inter_filepath)
 
     varnames = list(inter_ds.keys())
@@ -128,6 +129,7 @@ def apply_pgw_delta(wps_inter_filepath, deltas, dst_dir, var_map):
     fields = []
 
     for varname in varnames:
+        _logger.debug(f"Processing {varname}")
         var = inter_ds[varname]
         values = var.val
 
@@ -156,6 +158,7 @@ def apply_pgw_delta(wps_inter_filepath, deltas, dst_dir, var_map):
 
         fields.append(field)
 
+    _logger.info(f"Writing to {dst_dir}/{prefix}_{date}")
     pyw.cinter(prefix, date, geoinfo, fields, dst_dir)
 
 
@@ -170,6 +173,8 @@ def verify_metadata(metadata, cache_attributes):
 
         # Check if is list,
         if isinstance(value, (list, np.ndarray)):
+            if len(value) == 1:
+                value = value[0]
             if np.any(value != other):
                 return False
         # Check if is float
@@ -261,5 +266,9 @@ if cache_file is not None and not Path(cache_file).exists():
 
 
 # %%
+if not Path(dst_dir).exists():
+    _logger.info(f"Creating directory {dst_dir} for the output files")
+    Path(dst_dir).mkdir(parents=True)
+
 for wps_inter_filepath in wps_inter_filepaths:
     apply_pgw_delta(wps_inter_filepath, deltas, dst_dir, VAR_MAP)
