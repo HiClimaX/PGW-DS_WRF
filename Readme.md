@@ -14,7 +14,7 @@ conda env install
 
 ```bash
 cd Download_CMIP6
-python download_cmip6.py
+python download_pgw.py
 ```
 
 ## Create WPS intermediate files
