@@ -9,7 +9,7 @@ If you don't have anaconda, you will see [Installing Miniconda](https://www.anac
 if you finish installing anaconda, you should create enviroment with Python3.10.
 
 ```bash
-conda create -n pgw-ds Python=3.10.13 
+conda create -n pgw-ds Python=3.12
 ```
 ```bash
 conda activate pgw-ds
@@ -17,11 +17,13 @@ conda activate pgw-ds
 This scripts use jupyternotebook (".ipynb" file), so you will use jupyter lab (jupyter hub) or VS code.
 
 
-if you already can use jupyternotebook, you can use the enviroment as follow.
+If you already can use jupyternotebook, you can use the enviroment as follow.
 
 ```bash
 conda install ipykernel
 ```
+
+If the kernel is not recognized.
 
 ```bash
 python -m ipykernel install --user --name=pgw-ds --display-name "Python (PGW-DS)"
@@ -30,8 +32,7 @@ python -m ipykernel install --user --name=pgw-ds --display-name "Python (PGW-DS)
 Also, you should install [gcsfs](https://gcsfs.readthedocs.io/en/latest/), [intake-esm](https://intake-esm.readthedocs.io/en/stable/), [xesmf](https://xesmf.readthedocs.io/en/latest/index.html), [wrf-python](https://wrf-python.readthedocs.io/en/latest/), [cartopy](https://scitools.org.uk/cartopy/docs/latest/), [pywinter](https://pywinter.readthedocs.io/en/latest/)
 
 ```bash
-pip install numpy==2.2.6
-pip install pywinter
+pip install pip install git+https://github.com/dniloash/Pywinter
 ```
 
 ```bash
