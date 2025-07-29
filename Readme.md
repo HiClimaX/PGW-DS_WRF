@@ -14,10 +14,21 @@ conda create -n pgw-ds Python=3.12
 ```bash
 conda activate pgw-ds
 ```
+
+You should install [gcsfs](https://gcsfs.readthedocs.io/en/latest/), [intake-esm](https://intake-esm.readthedocs.io/en/stable/), [xesmf](https://xesmf.readthedocs.io/en/latest/index.html), [wrf-python](https://wrf-python.readthedocs.io/en/latest/), [cartopy](https://scitools.org.uk/cartopy/docs/latest/), [pywinter](https://pywinter.readthedocs.io/en/latest/)
+
+```bash
+conda install -c conda-forge gcsfs intake-esm xesmf wrf-python cartopy
+```
+
+```bash
+pip install git+https://github.com/dniloash/Pywinter
+```
+
+
 This scripts use jupyternotebook (".ipynb" file), so you will use jupyter lab (jupyter hub) or VS code.
 
-
-If you already can use jupyternotebook, you can use the enviroment as follow.
+If you already can use jupyter, you can use the enviroment as follow.
 
 ```bash
 conda install ipykernel
@@ -29,15 +40,7 @@ If the kernel is not recognized.
 python -m ipykernel install --user --name=pgw-ds --display-name "Python (PGW-DS)"
 ```
 
-Also, you should install [gcsfs](https://gcsfs.readthedocs.io/en/latest/), [intake-esm](https://intake-esm.readthedocs.io/en/stable/), [xesmf](https://xesmf.readthedocs.io/en/latest/index.html), [wrf-python](https://wrf-python.readthedocs.io/en/latest/), [cartopy](https://scitools.org.uk/cartopy/docs/latest/), [pywinter](https://pywinter.readthedocs.io/en/latest/)
 
-```bash
-pip install pip install git+https://github.com/dniloash/Pywinter
-```
-
-```bash
-conda install -c conda-forge gcsfs intake-esm xesmf wrf-python cartopy
-```
 
 
 
