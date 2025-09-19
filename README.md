@@ -1,4 +1,4 @@
-# PGW-DS\_WRF
+# PGW-DS_WRF
 
 **Pseudo-Global-Warming (PGW) downscaling using WRF**
 
@@ -28,7 +28,7 @@ This repository includes:
 ### Root
 
 * `README.md` → Overview & usage
-* `requirements.txt` → Python dependencies
+* `environment.yml` → Python dependencies
 * `docs/` → Documentation
 * `data/` → Input and processed datasets
 * `scripts/` → Preprocessing, PGW, WRF, postprocessing
@@ -63,6 +63,29 @@ This repository includes:
 
 * Unit tests for reproducibility
 
+## Requirements
+
+### OS
+
+This program use [WRF](https://github.com/wrf-model/WRF), so we have to do in **Linux**.
+
+### Python enviroments
+
+We reccomend to use [anaconda](https://www.anaconda.com/) because this script need a library which can install by conda.
+
+If you don't have anaconda, you will see [Installing Miniconda](https://www.anaconda.com/docs/getting-started/miniconda/install#linux-terminal-installer)
+
+
+This program uses the following libraries.
+
+- [gcsfs](https://gcsfs.readthedocs.io/en/latest/)
+- [intake-esm](https://intake-esm.readthedocs.io/en/stable/)
+- [xesmf](https://xesmf.readthedocs.io/en/latest/index.html)
+- [wrf-python](https://wrf-python.readthedocs.io/en/latest/)
+- [cartopy](https://scitools.org.uk/cartopy/docs/latest/)
+- [pywinter](https://pywinter.readthedocs.io/en/latest/)
+
+More details in [Requirements.md](Requirements.md)
 
 ## Installation
 
@@ -76,10 +99,10 @@ cd PGW-DS_WRF
 2. Create and activate environment:
 
 ```bash
-conda create -n pgw python=3.10
-conda activate pgw
-pip install -r requirements.txt
+conda env create -f environment.yml
 ```
+
+This scripts use jupyternotebook (".ipynb" file), so you will use jupyter lab (jupyter hub) or VS code.
 
 3. Install WRF:
 
