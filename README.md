@@ -136,7 +136,7 @@ python scripts/postprocess/plot_maps.py
 python scripts/postprocess/cmorize_output.py
 ```
 
-## 📈 Example Output
+## Example Output
 
 * WRF simulation: `outputs/wrf/sample_output.nc`
 * Visualization: `outputs/figures/temperature_anomaly.png`
