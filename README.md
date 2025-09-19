@@ -85,7 +85,7 @@ This program uses the following libraries.
 - [cartopy](https://scitools.org.uk/cartopy/docs/latest/)
 - [pywinter](https://pywinter.readthedocs.io/en/latest/)
 
-
+More details in [Requirements.md](Requirements.md)
 
 ## Installation
 
@@ -101,6 +101,8 @@ cd PGW-DS_WRF
 ```bash
 conda env create -f environment.yml
 ```
+
+This scripts use jupyternotebook (".ipynb" file), so you will use jupyter lab (jupyter hub) or VS code.
 
 3. Install WRF:
 

@@ -1,6 +1,4 @@
-# Pseudo-global-warming downscaling (PGW-DS) program
-
-## Requirements
+# Requirements
 
 - **OS**
 
@@ -33,9 +31,19 @@ pip install git+https://github.com/dniloash/Pywinter
 
 - **Jupyter setup**
 
-This scripts use jupyternotebook (".ipynb" file), so you will use jupyter lab (jupyter hub) or VS code.
+This scripts use [jupyternotebook](https://jupyter-notebook.readthedocs.io/en/latest/) (".ipynb" file), so you will use [jupyter lab](https://jupyter.org/install) (jupyter hub) or [VS code extension](https://marketplace.visualstudio.com/items?itemName=ms-toolsai.jupyter).
 
-If you already can use jupyter, you can use the enviroment as follow.
+If you want to use **JupyterLab**, just follow the steps.
+
+```bash
+pip install jupyterlab
+```
+or 
+```bash
+conda install jupyterlab
+```
+
+If you already use Jupyter, you can make the environment (**pgw-ds**) available by installing `ipykernel`.
 
 ```bash
 conda install ipykernel
