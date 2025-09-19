@@ -1,4 +1,4 @@
-# PGW-DS\_WRF
+# PGW-DS_WRF
 
 **Pseudo-Global-Warming (PGW) downscaling using WRF**
 
@@ -28,7 +28,7 @@ This repository includes:
 ### Root
 
 * `README.md` → Overview & usage
-* `requirements.txt` → Python dependencies
+* `environment.yml` → Python dependencies
 * `docs/` → Documentation
 * `data/` → Input and processed datasets
 * `scripts/` → Preprocessing, PGW, WRF, postprocessing
