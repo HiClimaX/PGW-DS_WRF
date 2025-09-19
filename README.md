@@ -1,130 +1,169 @@
-# PGW-DS_WRF
+# PGW-DS\_WRF
 
-This repository provides scripts, datasets, and workflows for conducting Pseudo-Global Warming (PGW) downscaling experiments using the WRF model.
-It is designed for reproducibility, transparency, and easy adaptation to new regions or datasets.
+**Pseudo-Global-Warming (PGW) downscaling using WRF**
 
-## 👥 Authors
+This repository provides scripts, datasets, and workflows for conducting **Pseudo-Global Warming (PGW)** downscaling experiments with the **Weather Research and Forecasting (WRF)** model. It is designed to be modular, reproducible, and extendable for different regions and scenarios.
 
-- Quang-Van Doan (University of Tsukuba, Japan) – Lead developer
-- Mamoru Yuasa (University of Tsukuba, Japan) 
-- [Your collaborators here]
-- 
+## Authors
+
+* **Quang-Van Doan** – University of Tsukuba 
+* **Mamoru Yuasa** – University of Tsukuba
+
 
 ## Overview
 
-Pseudo-Global Warming (PGW) is a widely used approach to assess the influence of climate change on high-resolution weather and climate simulations.
-It works by applying large-scale climate change anomalies from GCMs to reanalysis data, then using the modified forcing to drive regional climate models such as WRF.
+Pseudo-Global Warming (PGW) experiments are widely used to evaluate the impact of climate change on high-resolution weather and climate simulations. The PGW approach modifies reanalysis datasets with large-scale climate anomalies derived from GCMs (e.g., CMIP6), then uses the adjusted fields as forcing for WRF.
 
 This repository includes:
 
-> Scripts to preprocess reanalysis and GCM data.
+* Preprocessing tools for reanalysis and GCM data.
+* Scripts for PGW anomaly calculation and application.
+* WRF configuration templates.
+* Post-processing and visualization scripts.
+* Sample datasets and outputs for testing.
 
-> Tools to compute and apply PGW anomalies.
-
-> WRF configuration templates for downscaling.
-
-> Post-processing and visualization tools.
-
-> Sample input/output files for testing.
 
 ## Repository Structure
 
-PGW-Downscaling/
-├── README.md               # Overview & usage
-├── requirements.txt        # Python dependencies
-├── docs/                   # Documentation
-├── data/                   # Input & sample datasets
-├── scripts/                # Preprocess, PGW, downscaling, postprocess
-├── outputs/                # Example outputs & visualizations
-└── tests/                  # Unit tests for reproducibility
+### Root
+
+* `README.md` → Overview & usage
+* `requirements.txt` → Python dependencies
+* `docs/` → Documentation
+* `data/` → Input and processed datasets
+* `scripts/` → Preprocessing, PGW, WRF, postprocessing
+* `outputs/` → Simulation results and figures
+* `tests/` → Unit tests
+
+### docs/
+
+* `guideline.md`
+* `data_sources.md`
+
+### data/
+
+* `raw/` → Raw input datasets
+* `processed/` → Processed forcing fields
+* `sample/` → Small test datasets
+
+### scripts/
+
+* `preprocess/` → Preprocessing scripts
+* `pgw/` → PGW anomaly scripts
+* `downscaling/` → WRF setup and run scripts
+* `postprocess/` → Extraction & visualization scripts
+
+### outputs/
+
+* `wrf/` → WRF simulation outputs
+* `figures/` → Plots and maps
+* `standardized/` → CMORized outputs
+
+### tests/
+
+* Unit tests for reproducibility
+
 
 ## Installation
 
-Clone the repository:
+1. Clone the repository:
 
-git clone https://github.com/your-org/PGW-Downscaling.git
-cd PGW-Downscaling
+```bash
+git clone https://github.com/HiClimaX/PGW-DS_WRF.git
+cd PGW-DS_WRF
+```
 
+2. Create and activate environment:
 
-Create environment:
-
+```bash
 conda create -n pgw python=3.10
 conda activate pgw
 pip install -r requirements.txt
+```
 
+3. Install WRF:
 
-Install WRF, CDO, and NCO for downscaling and data manipulation.
+* [WRF](https://www.mmm.ucar.edu/weather-research-and-forecasting-model)
+
 
 ## Data
 
-The following datasets are required:
+Required datasets:
 
-Reanalysis: ERA5, JRA-55, or equivalent.
+* **Reanalysis**: ERA5 (ECMWF) or JRA-55
+* **GCM Data**: CMIP6 (historical and scenario experiments)
+* **Sample Data**: Provided in `data/sample/`
 
-GCM Data: CMIP6 historical + future scenario runs.
+Expected folder structure:
 
-Sample Data: Provided in data/sample/ for testing.
+```
+data/
+  ├── raw/
+  │   ├── ERA5/
+  │   └── CMIP6/
+  ├── processed/
+  └── sample/
+```
 
-Data must be stored under:
-
-data/raw/
-   ├── ERA5/
-   ├── CMIP6/
-   └── sample/
 
 ## Workflow
 
-### Preprocessing
+1. **Preprocessing**
 
-Extract and regrid ERA5 / CMIP6 data.
-
-Apply bias correction if necessary.
-
+```bash
 python scripts/preprocess/extract_forcing.py
+python scripts/preprocess/apply_bias_correction.py
+```
 
+2. **Compute PGW anomalies**
 
-### Compute PGW Anomalies
-
-Calculate monthly mean anomalies (future – historical).
-
-Apply anomalies to reanalysis baseline.
-
+```bash
 python scripts/pgw/compute_anomalies.py
 python scripts/pgw/apply_pgw.py
+```
 
+3. **Run WRF with PGW forcing**
 
-### Downscaling (WRF)
-
-Configure namelist.input (template provided).
-
-Run WRF with PGW-modified inputs.
-
+```bash
 bash scripts/downscaling/run_wrf.sh
+```
 
+4. **Post-processing & visualization**
 
-### Post-Processing
-
-Extract timeseries, generate maps, CMORize outputs.
-
+```bash
+python scripts/postprocess/extract_timeseries.py
 python scripts/postprocess/plot_maps.py
+python scripts/postprocess/cmorize_output.py
+```
+
+## 📈 Example Output
+
+* WRF simulation: `outputs/wrf/sample_output.nc`
+* Visualization: `outputs/figures/temperature_anomaly.png`
+* Standardized output: `outputs/standardized/pgw_output_CMOR.nc`
+
+---
 
 
-### Example Output
 
-WRF simulation: outputs/wrf/sample_output.nc
+## Citation
 
-Visualization: outputs/figures/temperature_anomaly.png
+If you use this repository, please cite:
 
-Standardized output: outputs/standardized/pgw_output_CMOR.nc
+```
+Doan, Q.-V., et al. (2025). PGW-DS_WRF: Pseudo-global-warming downscaling using WRF. GitHub Repository. https://github.com/HiClimaX/PGW-DS_WRF
+```
+
+---
 
 ## References
 
-Schär, C., et al. (1996). The Pseudo-Global Warming Method: A Tool to Investigate Climate Change Impacts.
+* Schär, C., et al. (1996). *The Pseudo-Global Warming Method: A Tool to Investigate Climate Change Impacts*.
+* Rasmussen, R., et al. (2011). *Simulation of extreme precipitation events using PGW approach*.
+* Doan, Q.V. and Kusaka, H. (2018). **.
 
-Rasmussen, R., et al. (2011). Simulation of extreme precipitation events using PGW approach.
 
-Doan Q.V. and Kusaka H. (2018)
 
-📜 License
+## License
 
-This repository is licensed under the MIT License.
+This project is licensed under the **MIT License** – see the [LICENSE](LICENSE) file for details.
