@@ -1,4 +1,5 @@
 # %%
+import logging
 import re
 
 import fire
@@ -24,11 +25,19 @@ experiment_ids = ["historical", "ssp370"]
 variable_ids = ["ta", "ua", "va", "hur", "zg", "ts"]
 start_date = pd.Timestamp("2010-01-01")
 end_date = pd.Timestamp("2010-02-01")
+_logger = logging.getLogger(__name__)
 
 
 # %%
 def get_download_urls(
-    variable_id, source_id, experiment_id, start_date, end_date, exclude_nodes: str = ""
+    variable_id,
+    table_id: str,
+    frequency: str,
+    source_id,
+    experiment_id,
+    start_date,
+    end_date,
+    exclude_nodes: str = "",
 ) -> list[str]:
     exclude_nodes_set = set(exclude_nodes.split(","))
 
@@ -48,8 +57,8 @@ def get_download_urls(
         project="CMIP6",
         experiment_id=experiment_id,
         variable=variable_id,
-        table_id="6hrPlevPt",
-        frequency="6hrPt",
+        table_id=table_id,
+        frequency=frequency,
         facets=facets,
         latest=True,
         source_id=source_id,
@@ -58,11 +67,17 @@ def get_download_urls(
     members = util.natural_sort(
         np.unique([result.json["member_id"][0] for result in search_results])
     )
+    _logger.info(f"Found members: {members}")
 
     ctx_first = ctx.constrain(member_id=members[0])
     search_results_first_member = filter_node(ctx_first.search())
     result = search_results_first_member[0]
     files: list[pyesgf.search.results.FileResult] = result.file_context().search()
+    _logger.info(f"Found {len(files)} files for member {members[0]}")
+
+    if table_id == "fx":
+        # fixed files (i.e., not changing with time)
+        return [file.download_url for file in files]
 
     download_urls = []
     for file in files:
@@ -76,6 +91,11 @@ def get_download_urls(
 
 # %%
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(levelname)s - %(message)s",
+        force=True,
+    )
     fire.Fire(get_download_urls)
     exit(0)
 

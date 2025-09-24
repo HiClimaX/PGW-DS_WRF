@@ -99,6 +99,7 @@ def download(
     area: tuple[float, float, float, float] | None = None,
     output_file: str | None = None,
     dry_run: bool = False,
+    overwrite: bool = False,
 ):
     """Download ERA5 single-level or pressure-level data.
 
@@ -129,6 +130,9 @@ def download(
 
     if dry_run:
         print(level, date1, date2, area, output_file)
+        return
+
+    if os.path.exists(output_file) and not overwrite:
         return
 
     tmp_output_file = output_file + ".tmp"

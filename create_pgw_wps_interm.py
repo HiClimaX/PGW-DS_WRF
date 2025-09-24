@@ -196,10 +196,10 @@ wps_inter_prefix = "ERA5"
 # file if necessary, set it to None to disable caching
 cache_file = "era5_cache.nc"
 
-# src_dir = Path("/data7/khanhdn/wrf/WPS/met_input/FNL/ungrib")
-# dst_dir = "/data7/khanhdn/wrf/WPS/runs/fnl_test_pgw/"
-# wps_inter_prefix = "FNL"
-# cache_file = "fnl_cache.nc"
+src_dir = Path("/data7/khanhdn/wrf/WPS/met_input/FNL/ungrib")
+dst_dir = "/data7/khanhdn/wrf/WPS/runs/fnl_test_pgw/"
+wps_inter_prefix = "FNL"
+cache_file = "fnl_cache.nc"
 
 wps_inter_filepaths = list(src_dir.glob(f"{wps_inter_prefix}:*"))
 

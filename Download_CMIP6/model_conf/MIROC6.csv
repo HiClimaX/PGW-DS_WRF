@@ -1,0 +1,16 @@
+var_id,table_id,frequency,note
+ta,6hrPlevPt,6hrPt
+ua,6hrPlevPt,6hrPt
+va,6hrPlevPt,6hrPt
+hus,6hrPlevPt,6hrPt
+zg,6hrPlevPt,6hrPt
+ps,6hrLev,6hrPt
+psl,6hrPlevPt,6hrPt
+ts,6hrPlevPt,6hrPt
+mrsos,3hr,3hrPt,Soil moisture
+tsl,6hrPlevPt,6hrPt,Soil temperature
+orog,fx,fx,Surface orography
+tas,3hr,3hrPt,Near-surface air temperature
+uas,3hr,3hrPt,
+vas,3hr,3hrPt,
+huss,3hr,3hrPt,Near-surface specific humidity
