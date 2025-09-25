@@ -75,6 +75,14 @@ def to_wps_interm(
     filename = f"{prefix}:{time.strftime('%Y-%m-%d_%H')}"
     fp = file_inventory.get(filename)
 
+    # Fill missing values by linear interpolation
+    data = data.interpolate_na(
+        "lat", method="linear", fill_value="extrapolate", keep_attrs=True
+    )
+    data = data.interpolate_na(
+        "lon", method="linear", fill_value="extrapolate", keep_attrs=True
+    )
+
     # Write IFV
     write_fortran_record(fp, struct.pack(">i", 5))
 
