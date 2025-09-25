@@ -148,70 +148,77 @@ def convert_single_file(
         ds = ds.sel(time=pd.date_range(start_date, end_date, freq=interval))
 
     for var_name in ds.variables.keys():
-        if var_name not in model_conf.index:
+        out_vars = model_conf[model_conf["var_id"] == var_name]
+        if len(out_vars) == 0:
             continue
 
         data = ds[var_name]
-        var_conf = model_conf.loc[var_name]
-        _logger.info("Processing variable %s in %s", var_name, nc_file)
-
-        if np.isfinite(var_conf["scale"]):
+        for _, var_conf in out_vars.iterrows():
             _logger.info(
-                "  Applying scale factor %s and units %s",
-                var_conf["scale"],
-                var_conf["units"],
-            )
-            with xr.set_options(keep_attrs=True):
-                data = data * float(var_conf["scale"])
-            data.attrs["units"] = var_conf["units"]
-
-        if data.attrs["units"] != var_conf["units"]:
-            _logger.critical(
-                "  Units mismatch for variable %s: data has %s but expected %s",
+                "Processing variable %s in %s to yield %s",
                 var_name,
-                data.attrs["units"],
-                var_conf["units"],
+                nc_file,
+                var_conf["wps_name"],
             )
-            raise ValueError("Units mismatch")
 
-        if "time" in ds.dims:
-            if "plev" in ds.dims:
+            if np.isfinite(var_conf["scale"]):
                 _logger.info(
-                    "  This is a pressure level data with levels: %s", data.plev.values
+                    "  Applying scale factor %s and units %s",
+                    var_conf["scale"],
+                    var_conf["units"],
                 )
-            else:
-                _logger.info("  This is a surface data")
-            for i_time in range(len(data.time)):
-                if "plev" in data.dims:
-                    for i_plev in range(len(data.plev)):
+                with xr.set_options(keep_attrs=True):
+                    data = data * float(var_conf["scale"])
+                data.attrs["units"] = var_conf["units"]
+
+            if data.attrs["units"] != var_conf["units"]:
+                _logger.critical(
+                    "  Units mismatch for variable %s: data has %s but expected %s",
+                    var_name,
+                    data.attrs["units"],
+                    var_conf["units"],
+                )
+                raise ValueError("Units mismatch")
+
+            if "time" in ds.dims:
+                if "plev" in ds.dims:
+                    _logger.info(
+                        "  This is a pressure level data with levels: %s",
+                        data.plev.values,
+                    )
+                else:
+                    _logger.info("  This is a surface data")
+                for i_time in range(len(data.time)):
+                    if "plev" in data.dims:
+                        for i_plev in range(len(data.plev)):
+                            to_wps_interm(
+                                data.isel(time=i_time, plev=i_plev),
+                                var_conf["wps_name"],
+                                prefix,
+                                file_inventory=file_inventory,
+                            )
+                    else:
                         to_wps_interm(
-                            data.isel(time=i_time, plev=i_plev),
+                            data.isel(time=i_time),
                             var_conf["wps_name"],
                             prefix,
                             file_inventory=file_inventory,
                         )
-                else:
+            else:
+                _logger.info("  This is a static surface data")
+                for time in pd.date_range(start_date, end_date, freq=interval):
                     to_wps_interm(
-                        data.isel(time=i_time),
+                        data,
                         var_conf["wps_name"],
                         prefix,
+                        time=time,
                         file_inventory=file_inventory,
                     )
-        else:
-            _logger.info("  This is a static surface data")
-            for time in pd.date_range(start_date, end_date, freq=interval):
-                to_wps_interm(
-                    data,
-                    var_conf["wps_name"],
-                    prefix,
-                    time=time,
-                    file_inventory=file_inventory,
-                )
 
     ds.close()
 
 
-model_conf = pd.read_csv("model_conf/MIROC6.csv").set_index("var_id")
+model_conf = pd.read_csv("model_conf/MIROC6.csv")
 start_date = pd.Timestamp("2010-01-05")
 end_date = pd.Timestamp("2010-01-06")
 
