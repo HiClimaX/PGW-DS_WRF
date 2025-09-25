@@ -16,6 +16,27 @@ if __name__ == "__main__":
     )
 
 
+class FileInventory:
+    def __init__(self):
+        self._files = {}
+
+    def get(self, filename: Path):
+        if filename not in self._files:
+            self._files[filename] = open(filename, "wb")
+        return self._files[filename]
+
+    def close_all(self):
+        for fp in self._files.values():
+            fp.close()
+        self._files = {}
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close_all()
+
+
 # %%
 def write_fortran_record(fp: IO, data):
     data = np.array(data)
@@ -26,8 +47,17 @@ def write_fortran_record(fp: IO, data):
     fp.write(struct.pack(">i", nbytes))
 
 
+def pad(s: str, length: int) -> bytes:
+    """Pad string to fixed length with spaces and convert to bytes."""
+    return s.ljust(length)[:length].encode("ascii")
+
+
 def to_wps_interm(
-    data: xr.DataArray, var_name: str, prefix: str, time: pd.Timestamp = None
+    data: xr.DataArray,
+    var_name: str,
+    prefix: str,
+    file_inventory: FileInventory,
+    time: pd.Timestamp = None,
 ):
     """Convert xarray DataArray to WPS intermediate file format.
 
@@ -43,47 +73,48 @@ def to_wps_interm(
         plev = 200100  # surface
 
     filename = f"{prefix}:{time.strftime('%Y-%m-%d_%H')}"
-    with open(filename, "ab") as fp:
-        # Write IFV
-        write_fortran_record(fp, struct.pack(">i", 5))
+    fp = file_inventory.get(filename)
 
-        # Write HDATE, XFCST, MAP_SOURCE, FIELD, UNITS, DESC, XLVL, NX, NY, IPROJ
-        write_fortran_record(
-            fp,
-            struct.pack(
-                ">24sf32s9s25s46sfiii",
-                time.strftime("%Y-%m-%d_%H:00:00").encode(),  # HDATE
-                0.0,  # XFCST
-                "CMIP6".encode(),  # MAP_SOURCE
-                var_name.encode(),  # FIELD
-                data.units.encode(),  # UNITS
-                data.standard_name.encode(),  # DESC
-                plev,  # XLVL
-                len(data.coords["lon"]),  # NX
-                len(data.coords["lat"]),  # NY
-                0,  # IPROJ
-            ),
-        )
+    # Write IFV
+    write_fortran_record(fp, struct.pack(">i", 5))
 
-        # Write STARTLOC, STARTLAT, STARTLON, DELTALAT, DELTALON, EARTH_RADIUS
-        write_fortran_record(
-            fp,
-            struct.pack(
-                ">8s5f",
-                "SWCORNER".encode(),  # STARTLOC
-                data.coords["lat"][0],  # STARTLAT
-                data.coords["lon"][0],  # STARTLON
-                data.coords["lat"][1] - data.coords["lat"][0],  # DELTALAT
-                data.coords["lon"][1] - data.coords["lon"][0],  # DELTALON
-                6367470e-3,  # EARTH_RADIUS
-            ),
-        )
+    # Write HDATE, XFCST, MAP_SOURCE, FIELD, UNITS, DESC, XLVL, NX, NY, IPROJ
+    write_fortran_record(
+        fp,
+        struct.pack(
+            ">24sf32s9s25s46sfiii",
+            pad(time.strftime("%Y-%m-%d_%H:00:00"), 24),  # HDATE
+            0.0,  # XFCST
+            pad("CMIP6", 32),  # MAP_SOURCE
+            pad(var_name, 9),  # FIELD
+            pad(data.units, 25),  # UNITS
+            pad(data.standard_name, 46),  # DESC
+            plev,  # XLVL
+            len(data.coords["lon"]),  # NX
+            len(data.coords["lat"]),  # NY
+            0,  # IPROJ
+        ),
+    )
 
-        # Write IS_WIND_EARTH_REL
-        write_fortran_record(fp, struct.pack(">i", 0))  # IS_WIND_EARTH_REL
+    # Write STARTLOC, STARTLAT, STARTLON, DELTALAT, DELTALON, EARTH_RADIUS
+    write_fortran_record(
+        fp,
+        struct.pack(
+            ">8s5f",
+            pad("SWCORNER", 8),  # STARTLOC
+            data.coords["lat"][0],  # STARTLAT
+            data.coords["lon"][0],  # STARTLON
+            data.coords["lat"][1] - data.coords["lat"][0],  # DELTALAT
+            data.coords["lon"][1] - data.coords["lon"][0],  # DELTALON
+            6367470e-3,  # EARTH_RADIUS
+        ),
+    )
 
-        # Write SLAB
-        write_fortran_record(fp, data.transpose("lon", "lat").values.astype(">f4"))
+    # Write IS_WIND_EARTH_REL
+    write_fortran_record(fp, struct.pack(">i", 0))  # IS_WIND_EARTH_REL
+
+    # Write SLAB
+    write_fortran_record(fp, data.transpose("lon", "lat").values.astype(">f4"))
 
 
 # %%
@@ -94,6 +125,7 @@ def convert_single_file(
     end_date: pd.Timestamp,
     interval: pd.Timedelta,
     prefix: str,
+    file_inventory: FileInventory,
 ):
     _logger.info("Processing file %s", nc_file)
     ds = xr.open_dataset(nc_file)
@@ -148,12 +180,14 @@ def convert_single_file(
                             data.isel(time=i_time, plev=i_plev),
                             var_conf["wps_name"],
                             prefix,
+                            file_inventory=file_inventory,
                         )
                 else:
                     to_wps_interm(
                         data.isel(time=i_time),
                         var_conf["wps_name"],
                         prefix,
+                        file_inventory=file_inventory,
                     )
         else:
             _logger.info("  This is a static surface data")
@@ -163,19 +197,24 @@ def convert_single_file(
                     var_conf["wps_name"],
                     prefix,
                     time=time,
+                    file_inventory=file_inventory,
                 )
+
+    ds.close()
 
 
 model_conf = pd.read_csv("model_conf/MIROC6.csv").set_index("var_id")
 start_date = pd.Timestamp("2010-01-05")
 end_date = pd.Timestamp("2010-01-06")
 
-for data_file in Path("Download_6hr").glob("*MIROC6_historical*.nc"):
-    convert_single_file(
-        data_file,
-        model_conf,
-        start_date,
-        end_date,
-        pd.Timedelta(hours=6),
-        "MIROC6_HISTORICAL",
-    )
+with FileInventory() as file_inventory:
+    for data_file in Path("Download_6hr").glob("*MIROC6_historical*.nc"):
+        convert_single_file(
+            data_file,
+            model_conf,
+            start_date,
+            end_date,
+            pd.Timedelta(hours=6),
+            "MIROC6_HISTORICAL",
+            file_inventory,
+        )
