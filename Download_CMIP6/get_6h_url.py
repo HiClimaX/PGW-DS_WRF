@@ -2,14 +2,12 @@
 import logging
 import re
 
-import fire
-
-# from operator import itemgetter
 import numpy as np
 import pandas as pd
 import pyesgf.search
 import util
 from pyesgf.search import SearchConnection
+from tap import tapify
 
 # %%
 source_ids = [
@@ -30,16 +28,19 @@ _logger = logging.getLogger(__name__)
 
 # %%
 def get_download_urls(
-    variable_id,
+    variable_id: str,
     table_id: str,
     frequency: str,
-    source_id,
-    experiment_id,
-    start_date,
-    end_date,
-    exclude_nodes: str = "",
+    source_id: str,
+    experiment_id: str,
+    start_date: pd.Timestamp,
+    end_date: pd.Timestamp,
+    exclude_nodes: list[str] = [],
+    esgf_url: str = "http://esgf-node.llnl.gov/esg-search",
 ) -> list[str]:
-    exclude_nodes_set = set(exclude_nodes.split(","))
+    """
+    Reference: https://esgf.github.io/esg-search/ESGF_Search_RESTful_API.html
+    """
 
     def filter_node(results):
         return [
@@ -48,9 +49,8 @@ def get_download_urls(
             if result.json["data_node"] not in exclude_nodes_set
         ]
 
-    start_date = pd.Timestamp(start_date)
-    end_date = pd.Timestamp(end_date)
-    conn = SearchConnection("https://esgf.ceda.ac.uk/esg-search", distrib=True)
+    exclude_nodes_set = frozenset(exclude_nodes)
+    conn = SearchConnection(esgf_url, distrib=True)
     facets = "project,experiment_id,variable_id,source_id,member_id,table_id,frequency,data_node"
 
     ctx = conn.new_context(
@@ -69,10 +69,18 @@ def get_download_urls(
     )
     _logger.info(f"Found members: {members}")
 
+    if len(members) == 0:
+        _logger.critical("Found no data source for the requested variable")
+        raise RuntimeError("Found no data source for the requested variable")
+
     ctx_first = ctx.constrain(member_id=members[0])
     search_results_first_member = filter_node(ctx_first.search())
     result = search_results_first_member[0]
-    files: list[pyesgf.search.results.FileResult] = result.file_context().search()
+
+    file_context: pyesgf.search.context.FileSearchContext = result.file_context()
+    file_context.facets = facets
+    files: list[pyesgf.search.results.FileResult] = file_context.search()
+
     _logger.info(f"Found {len(files)} files for member {members[0]}")
 
     if table_id == "fx":
@@ -96,7 +104,7 @@ if __name__ == "__main__":
         format="%(asctime)s - %(levelname)s - %(message)s",
         force=True,
     )
-    fire.Fire(get_download_urls)
+    print("\n".join(tapify(get_download_urls)))
     exit(0)
 
 # %%

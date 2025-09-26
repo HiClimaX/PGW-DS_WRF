@@ -7,6 +7,7 @@ from typing import IO
 import numpy as np
 import pandas as pd
 import xarray as xr
+from tap import tapify
 
 _logger = logging.getLogger(__name__)
 
@@ -218,18 +219,27 @@ def convert_single_file(
     ds.close()
 
 
-model_conf = pd.read_csv("model_conf/MIROC6.csv")
-start_date = pd.Timestamp("2010-01-05")
-end_date = pd.Timestamp("2010-01-06")
+def convert_files(
+    model_conf_path: str,
+    start_date: pd.Timestamp,
+    end_date: pd.Timestamp,
+    interval: pd.Timedelta,
+    prefix: str,
+    nc_files: list[str],
+):
+    model_conf = pd.read_csv(model_conf_path)
+    with FileInventory() as file_inventory:
+        for nc_file in nc_files:
+            convert_single_file(
+                nc_file,
+                model_conf,
+                start_date,
+                end_date,
+                interval,
+                prefix,
+                file_inventory=file_inventory,
+            )
 
-with FileInventory() as file_inventory:
-    for data_file in Path("Download_6hr").glob("*MIROC6_historical*.nc"):
-        convert_single_file(
-            data_file,
-            model_conf,
-            start_date,
-            end_date,
-            pd.Timedelta(hours=6),
-            "MIROC6_HISTORICAL",
-            file_inventory,
-        )
+
+if __name__ == "__main__":
+    tapify(convert_files)
