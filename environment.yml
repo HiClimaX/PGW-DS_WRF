@@ -6,7 +6,7 @@ dependencies:
   - pip:
     - fire
     - cdsapi>=0.7.2
-    - git+https://github.com/dniloash/Pywinter@c002666
+    - pywinter>=2.0.7
   - parallel
   - intake
   - python=3.12
