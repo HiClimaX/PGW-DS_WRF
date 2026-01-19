@@ -7,7 +7,7 @@ We tested these scripts on Python 3.12.
 It is easy if you use conda. From the base directory, which contains `environment.yml`, run
 
 ```bash
-conda env install
+conda env create -f environment.yml
 ```
 
 ## Download CMIP6 GCM monthly data
