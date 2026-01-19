@@ -33,6 +33,6 @@ done
 
 echo "Dates:" "${dates[@]}"
 
-parallel -j 2 --bar --joblog download.log --resume-failed --plus \
+parallel -j 2 --bar --plus \
     python GetERA5.py '{1}' '{2}' --area "$Nort,$West,$Sout,$East" --output-file "$DATADIR/{2:0:4}/ERA5-{2}-{1}.grib" \
     ::: sl pl ::: "${dates[@]}"
