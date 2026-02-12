@@ -23,11 +23,12 @@ from util import PANGEO_CATALOG_URL
 
 # %%
 def download_files(
-    catalog_url: str, sid: str, exp: str, var: str, start_year: int, end_year: int
+    download_dir: Path, catalog_url: str, sid: str, exp: str, var: str, start_year: int, end_year: int
 ):
     """
     Download files from the CMIP6 data store
 
+    :param download_dir: directory to save downloaded files
     :param catalog_url: intake esm data store
     :param sid: source_id
     :param exp: experiment_id
@@ -75,7 +76,7 @@ def download_files(
         )
         return False
 
-    odir = Path("Download") / sid / exp
+    odir = download_dir / sid / exp
     odir.mkdir(parents=True, exist_ok=True)
 
     def output_file_name(key):
@@ -183,26 +184,32 @@ def download_data(
 
 
 # %%
-source_ids = [
-    "EC-Earth3",
-    "MIROC6",
-    "MRI-ESM2-0",
-    "ACCESS-CM2",
-    "IPSL-CM6A-LR",
-    "MPI-ESM1-2-HR",
-]
-experiments = ["ssp585"]
-variables = ["tas", "ta", "ua", "va", "hur", "zg", "ts"]
+if __name__ == "__main__":
+    #  Please modify the settings to include the models you want to download
+    source_ids = [
+        "EC-Earth3",
+        "MIROC6",
+        "MRI-ESM2-0",
+        "ACCESS-CM2",
+        "IPSL-CM6A-LR",
+        "MPI-ESM1-2-HR",
+    ]
+    experiments = ['historical','ssp585', 'ssp126', 'ssp370','ssp245']
+    variables = ["tas", "ta", "ua", "va", "hur", "zg", "ts"]
+    historical_period = (1995, 2014)
+    ssp_period = (2045, 2064)
+    download_dir = Path("data")
+    download_dir.mkdir(parents=True, exist_ok=True)
 
-historical_status = download_data(source_ids, ["historical"], variables, 1995, 2014)
-ssp_status = download_data(source_ids, experiments, variables, 2045, 2064)
+    historical_status = download_data(source_ids, ["historical"], variables, *historical_period)
+    ssp_status = download_data(source_ids, experiments, variables, *ssp_period)
 
-download_status = pd.concat([historical_status, ssp_status], ignore_index=True)
-print(f"Successfully downloaded {download_status['success'].sum()} files")
+    download_status = pd.concat([historical_status, ssp_status], ignore_index=True)
+    print(f"Successfully downloaded {download_status['success'].sum()} files")
 
-failed_download = download_status.query("~success")
-if not failed_download.empty:
-    print("Couldn't download the following files")
-    print(failed_download)
-else:
-    print("No failed download")
+    failed_download = download_status.query("~success")
+    if not failed_download.empty:
+        print("Couldn't download the following files")
+        print(failed_download)
+    else:
+        print("No failed download")
