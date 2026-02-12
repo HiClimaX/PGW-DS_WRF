@@ -1,0 +1,24 @@
+name: dv-pgw
+channels:
+  - conda-forge
+dependencies:
+  - pip
+  - pip:
+    - fire
+    - cdsapi>=0.7.2
+    - pywinter>=2.0.7
+  - parallel
+  - intake
+  - python=3.12
+  - ipykernel
+  - ipywidgets
+  - intake-esm
+  - requests
+  - aiohttp
+  - matplotlib
+  - gcsfs
+  - pre-commit
+  - tqdm
+  - esgf-pyclient
+  - xesmf
+  - typed-argument-parser
