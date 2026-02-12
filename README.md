@@ -7,6 +7,7 @@ This repository provides scripts, datasets, and workflows for conducting **Pseud
 ## Authors
 
 * **Quang-Van Doan** – University of Tsukuba 
+* **Do Ngoc Khanh** – Shibaura Institute of Technology 
 * **Mamoru Yuasa** – University of Tsukuba
 
 
@@ -27,41 +28,32 @@ This repository includes:
 
 ### Root
 
-* `README.md` → Overview & usage
-* `environment.yml` → Python dependencies
-* `docs/` → Documentation
-* `data/` → Input and processed datasets
-* `scripts/` → Preprocessing, PGW, WRF, postprocessing
-* `outputs/` → Simulation results and figures
-* `tests/` → Unit tests
+* [README.md](README.md) → Overview & usage
+* [environment.yml](environment.yml) → Python dependencies
+* [create_pgw_wps_interm.py](create_pgw_wps_interm.py) → Add PGW delta to WPS intermediate files
 
-### docs/
+### [Download_CMIP6/](Download_CMIP6/)
 
-* `guideline.md`
-* `data_sources.md`
+Scripts for downloading CMIP6 GCM data:
 
-### data/
+* [download_pgw.py](Download_CMIP6/download_pgw.py) → Download CMIP6 monthly data via intake-esm
+* [get_6h_url.py](Download_CMIP6/get_6h_url.py) → Get 6-hourly data URLs
 
-* `raw/` → Raw input datasets
-* `processed/` → Processed forcing fields
-* `sample/` → Small test datasets
+### [get_era5_data/](get_era5_data/)
 
-### scripts/
+Scripts for downloading ERA5 reanalysis data:
 
-* `preprocess/` → Preprocessing scripts
-* `pgw/` → PGW anomaly scripts
-* `downscaling/` → WRF setup and run scripts
-* `postprocess/` → Extraction & visualization scripts
+* [GetERA5.py](get_era5_data/GetERA5.py) → Download ERA5 pressure level and single level data
+* [download.sh](get_era5_data/download.sh) → Shell script for batch ERA5 download
 
-### outputs/
+### [Run_WRF/](Run_WRF/)
 
-* `wrf/` → WRF simulation outputs
-* `figures/` → Plots and maps
-* `standardized/` → CMORized outputs
+WRF execution and analysis notebooks:
 
-### tests/
-
-* Unit tests for reproducibility
+* [Run_WRF.ipynb](Run_WRF/Run_WRF.ipynb) → Standard WRF run
+* [Run_PGW.ipynb](Run_WRF/Run_PGW.ipynb) → PGW experiment run
+* [PlotT2diff.ipynb](Run_WRF/PlotT2diff.ipynb) → Visualize temperature differences
+* [namelist/](Run_WRF/namelist/) → WRF and WPS configuration files
 
 ## Requirements
 
@@ -87,86 +79,89 @@ This program uses the following libraries.
 
 More details in [Requirements.md](Requirements.md)
 
-## Installation
+## Requirements
 
-1. Clone the repository:
+0. Install WRF and download WPS_GEOG:
 
-```bash
-git clone https://github.com/HiClimaX/PGW-DS_WRF.git
-cd PGW-DS_WRF
-```
+* [WRF](https://www.mmm.ucar.edu/weather-research-and-forecasting-model)
+* [WPS_GEOG](https://www2.mmm.ucar.edu/wrf/users/download/get_sources_wps_geog.html)
 
-2. Create and activate environment:
+1. It is easy if you use conda. From the base directory, which contains `environment.yml`, run
 
 ```bash
 conda env create -f environment.yml
 ```
 
-This scripts use jupyternotebook (".ipynb" file), so you will use jupyter lab (jupyter hub) or VS code.
 
-3. Install WRF:
+## Workflow
 
-* [WRF](https://www.mmm.ucar.edu/weather-research-and-forecasting-model)
+### 1. Download CMIP6 GCM monthly data
 
+See [Download_CMIP6/download_pgw.py](Download_CMIP6/download_pgw.py)
+
+```bash
+cd Download_CMIP6
+python download_pgw.py
+```
+
+### 2. Create WPS intermediate files
+
+We have tested for ERA5 pressure levels data.
+
+The steps are:
+
+1. Download ERA5 data. See [get_era5_data/GetERA5.py](get_era5_data/GetERA5.py)
+```bash
+cd get_era5_data
+./download.sh
+```
+Modify the script accordingly for your region of interest.
+
+2. Use WPS to ungrib the grib file. You should get a bunch of files with names
+similar to `FILE:2000-01-10_19` or `ERA5:2000-01-10_19`. The prefix (`FILE` or
+`ERA5`) can be set in the [namelist.wps](Run_WRF/namelist/namelist.wps) file. We use the ERA5 prefix.
+
+3. Run the script to add PGW delta to variables in WPS intermediate files. See [create_pgw_wps_interm.py](create_pgw_wps_interm.py)
+```bash
+python create_pgw_wps_interm.py
+```
+
+### 3. Run other WRF steps (e.g., `metgrid.exe`) as usual.
+
+ **Test run with WRF**
+
+In [Run_WRF/](Run_WRF/)
+
+* [Run_WRF.ipynb](Run_WRF/Run_WRF.ipynb)
+* [Run_PGW.ipynb](Run_WRF/Run_PGW.ipynb)
+
+---
 
 ## Data
 
 Required datasets:
 
-* **Reanalysis**: ERA5 (ECMWF) or JRA-55
+* **Reanalysis**: ERA5 (ECMWF)
 * **GCM Data**: CMIP6 (historical and scenario experiments)
-* **Sample Data**: Provided in `data/sample/`
 
 Expected folder structure:
 
 ```
-data/
-  ├── raw/
-  │   ├── ERA5/
-  │   └── CMIP6/
-  ├── processed/
-  └── sample/
+Download_CMIP6/
+  └── Download/
+      ├── EC-Earth3/
+      │   ├── historical/
+      │   └── ssp585/
+      ├── MIROC6/
+      │   ├── historical/
+      │   └── ssp585/
+      ├── MRI-ESM2-0/
+      ├── ACCESS-CM2/
+      ├── IPSL-CM6A-LR/
+      └── MPI-ESM1-2-HR/
+ERA5/
+  └── (ERA5 GRIB files)
 ```
-
-
-## Workflow
-
-1. **Preprocessing**
-
-```bash
-python scripts/preprocess/extract_forcing.py
-python scripts/preprocess/apply_bias_correction.py
-```
-
-2. **Compute PGW anomalies**
-
-```bash
-python scripts/pgw/compute_anomalies.py
-python scripts/pgw/apply_pgw.py
-```
-
-3. **Run WRF with PGW forcing**
-
-```bash
-bash scripts/downscaling/run_wrf.sh
-```
-
-4. **Post-processing & visualization**
-
-```bash
-python scripts/postprocess/extract_timeseries.py
-python scripts/postprocess/plot_maps.py
-python scripts/postprocess/cmorize_output.py
-```
-
-## Example Output
-
-* WRF simulation: `outputs/wrf/sample_output.nc`
-* Visualization: `outputs/figures/temperature_anomaly.png`
-* Standardized output: `outputs/standardized/pgw_output_CMOR.nc`
-
----
-
 
 
 ## Citation
