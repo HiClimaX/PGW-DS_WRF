@@ -132,6 +132,20 @@ similar to `FILE:2000-01-10_19` or `ERA5:2000-01-10_19`. The prefix (`FILE` or
 `ERA5`) can be set in the [namelist.wps](Run_WRF/namelist/namelist.wps) file. We use the ERA5 prefix.
 
 3. Run the script to add PGW delta to variables in WPS intermediate files. See [create_pgw_wps_interm.py](create_pgw_wps_interm.py)
+
+Before running, edit the `CONFIG` block in [create_pgw_wps_interm.py](create_pgw_wps_interm.py#L29-L46) to match your paths and periods. Key fields:
+
+- `src_dir`: Directory containing WPS intermediate files (e.g., ERA5:YYYY-MM-DD_HH)
+- `dst_dir`: Output directory for PGW-applied files
+- `wps_inter_prefix`: Prefix used in the intermediate file names (e.g., ERA5)
+- `cache_file`: Cache NetCDF file name (set to empty or None to disable)
+- `present`, `future`: Periods used for delta calculation
+- `source_ids`: CMIP6 models used to compute deltas
+- `experiment`: CMIP6 experiment name (e.g., ssp585)
+- `download_dir`: CMIP6 download root directory
+
+Then run:
+
 ```bash
 python create_pgw_wps_interm.py
 ```

@@ -26,6 +26,26 @@ VAR_MAP = {
 }
 
 
+CONFIG = {
+    "src_dir": "/data7/khanhdn/wrf/WPS/met_input/ERA5/ungrib",
+    "dst_dir": "/data7/khanhdn/wrf/WPS/runs/era5_test_pgw/",
+    "wps_inter_prefix": "ERA5",
+    "cache_file": "era5_cache.nc",
+    "present": "1995-2014",
+    "future": "2045-2064",
+    "source_ids": [
+        "EC-Earth3",
+        "MIROC6",
+        "MRI-ESM2-0",
+        "ACCESS-CM2",
+        "IPSL-CM6A-LR",
+        "MPI-ESM1-2-HR",
+    ],
+    "experiment": "ssp585",
+    "download_dir": "Download_CMIP6/Download",
+}
+
+
 def target_dataset(wps_inter_filepath):
     wps_inter_ds = pyw.rinter(wps_inter_filepath)
 
@@ -189,60 +209,90 @@ def verify_metadata(metadata, cache_attributes):
 
 
 # %%
-src_dir = Path("/data7/khanhdn/wrf/WPS/runs/era5_test/")
-dst_dir = "/data7/khanhdn/wrf/WPS/runs/era5_test_pgw/"
-wps_inter_prefix = "ERA5"
-# Calculating deltas sometimes takes a long time so we can cache the result to a
-# file if necessary, set it to None to disable caching
-cache_file = "era5_cache.nc"
-
-src_dir = Path("/data7/khanhdn/wrf/WPS/met_input/FNL/ungrib")
-dst_dir = "/data7/khanhdn/wrf/WPS/runs/fnl_test_pgw/"
-wps_inter_prefix = "FNL"
-cache_file = "fnl_cache.nc"
-
-wps_inter_filepaths = list(src_dir.glob(f"{wps_inter_prefix}:*"))
-
-present = "1995-2014"
-future = "2045-2064"
-source_ids = [
-    "EC-Earth3",
-    "MIROC6",
-    "MRI-ESM2-0",
-    "ACCESS-CM2",
-    "IPSL-CM6A-LR",
-    "MPI-ESM1-2-HR",
-]
-experiment = "ssp585"
-download_dir = Path("Download_CMIP6/Download")
-
-ds_target, plev, metadata = target_dataset(wps_inter_filepaths[0])
-
-metadata.update(
-    {
-        "source_ids": sorted(source_ids),
-        "experiment": experiment,
-        "present": present,
-        "future": future,
-    }
-)
-
-# %%
-if cache_file is not None and Path(cache_file).exists():
-    _logger.info(f"Reading cache file {cache_file}")
-    deltas = xr.open_dataset(cache_file)
-    if not verify_metadata(metadata, deltas.attrs):
-        message = (
-            "Cache metadata mismatch. "
-            "Maybe the cache file was created with "
-            "different parameters (e.g., GCMs, experiment, years)."
+def get_or_calculate_deltas(
+    ds_target,
+    plev,
+    source_ids,
+    experiment,
+    present,
+    future,
+    download_dir,
+    cache_file,
+    metadata,
+    _logger,
+):
+    """
+    Function to handle cache file existence, validation, calculation, and saving.
+    """
+    if cache_file is not None and Path(cache_file).exists():
+        _logger.info(f"Reading cache file {cache_file}")
+        deltas = xr.open_dataset(cache_file)
+        if not verify_metadata(metadata, deltas.attrs):
+            message = (
+                "Cache metadata mismatch. "
+                "Maybe the cache file was created with "
+                "different parameters (e.g., GCMs, experiment, years)."
+            )
+            _logger.critical(message + f"\nExpected: {metadata}\nActual: {deltas.attrs}")
+            raise RuntimeError(message)
+        _logger.info("Cache file read successfully")
+    else:
+        _logger.info("Calculating deltas")
+        deltas = calculate_deltas(
+            ds_target,
+            plev,
+            source_ids,
+            experiment,
+            present,
+            future,
+            download_dir,
         )
-        _logger.critical(message + f"\nExpected: {metadata}\nActual: {deltas.attrs}")
-        raise RuntimeError(message)
-    _logger.info("Cache file read successfully")
-else:
-    _logger.info("Calculating deltas")
-    deltas = calculate_deltas(
+        # Write cache if the cache file does not exist
+        if cache_file is not None and not Path(cache_file).exists():
+            _logger.info(f"Writing cache file {cache_file}")
+            deltas.attrs.update(metadata)
+            deltas.to_netcdf(
+                cache_file,
+                encoding={
+                    varname: {"zlib": True, "complevel": 1} for varname in deltas.variables
+                },
+            )
+    return deltas
+
+
+def main():
+    src_dir = Path(CONFIG["src_dir"])
+    dst_dir = Path(CONFIG["dst_dir"])
+    wps_inter_prefix = CONFIG["wps_inter_prefix"]
+    cache_file = CONFIG["cache_file"]
+
+    if not src_dir.exists():
+        raise FileNotFoundError(f"src_dir does not exist: {src_dir}")
+
+    wps_inter_filepaths = list(src_dir.glob(f"{wps_inter_prefix}:*"))
+    if not wps_inter_filepaths:
+        raise FileNotFoundError(
+            f"No WPS intermediate files found in {src_dir} with prefix {wps_inter_prefix}"
+        )
+
+    present = CONFIG["present"]
+    future = CONFIG["future"]
+    source_ids = CONFIG["source_ids"]
+    experiment = CONFIG["experiment"]
+    download_dir = Path(CONFIG["download_dir"])
+
+    ds_target, plev, metadata = target_dataset(wps_inter_filepaths[0])
+
+    metadata.update(
+        {
+            "source_ids": sorted(source_ids),
+            "experiment": experiment,
+            "present": present,
+            "future": future,
+        }
+    )
+
+    deltas = get_or_calculate_deltas(
         ds_target,
         plev,
         source_ids,
@@ -250,25 +300,18 @@ else:
         present,
         future,
         download_dir,
-    )
-
-# %%
-# Write cache if the cache file does not exist
-if cache_file is not None and not Path(cache_file).exists():
-    _logger.info(f"Writing cache file {cache_file}")
-    deltas.attrs.update(metadata)
-    deltas.to_netcdf(
         cache_file,
-        encoding={
-            varname: {"zlib": True, "complevel": 1} for varname in deltas.variables
-        },
+        metadata,
+        _logger,
     )
 
+    if not dst_dir.exists():
+        _logger.info(f"Creating directory {dst_dir} for the output files")
+        dst_dir.mkdir(parents=True)
 
-# %%
-if not Path(dst_dir).exists():
-    _logger.info(f"Creating directory {dst_dir} for the output files")
-    Path(dst_dir).mkdir(parents=True)
+    for wps_inter_filepath in wps_inter_filepaths:
+        apply_pgw_delta(wps_inter_filepath, deltas, dst_dir, VAR_MAP)
 
-for wps_inter_filepath in wps_inter_filepaths:
-    apply_pgw_delta(wps_inter_filepath, deltas, dst_dir, VAR_MAP)
+
+if __name__ == "__main__":
+    main()
