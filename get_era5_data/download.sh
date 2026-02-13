@@ -11,6 +11,7 @@ DATADIR=data/
 # Sout=15
 # East=150
 
+# Please set the following variables:
 # Japan
 DATADIR=data/japan/
 DATE1=20231231

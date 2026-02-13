@@ -80,6 +80,7 @@ This program uses the following libraries.
 More details in [Requirements.md](Requirements.md)
 
 ## Requirements
+Details in [Requirements.md](./Requirements.md)
 
 0. Install WRF and download WPS_GEOG:
 
@@ -111,11 +112,20 @@ We have tested for ERA5 pressure levels data.
 The steps are:
 
 1. Download ERA5 data. See [get_era5_data/GetERA5.py](get_era5_data/GetERA5.py)
+
+Before running the download script, edit [get_era5_data/download.sh](get_era5_data/download.sh) to configure your region and time period. The following parameters need to be modified:
+
+- `DATADIR`: Output directory for downloaded data
+- `DATE1`: Start date (YYYYMMDD format)
+- `DATE2`: End date (YYYYMMDD format)
+- `Nort`, `West`, `Sout`, `East`: Geographic boundaries (North, West, South, East latitudes/longitudes)
+
+Then run:
+
 ```bash
 cd get_era5_data
 ./download.sh
 ```
-Modify the script accordingly for your region of interest.
 
 2. Use WPS to ungrib the grib file. You should get a bunch of files with names
 similar to `FILE:2000-01-10_19` or `ERA5:2000-01-10_19`. The prefix (`FILE` or
