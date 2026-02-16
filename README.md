@@ -23,38 +23,6 @@ This repository includes:
 * Post-processing and visualization scripts.
 * Sample datasets and outputs for testing.
 
-
-## Repository Structure
-
-### Root
-
-* [README.md](README.md) → Overview & usage
-* [environment.yml](environment.yml) → Python dependencies
-* [create_pgw_wps_interm.py](create_pgw_wps_interm.py) → Add PGW delta to WPS intermediate files
-
-### [Download_CMIP6/](Download_CMIP6/)
-
-Scripts for downloading CMIP6 GCM data:
-
-* [download_pgw.py](Download_CMIP6/download_pgw.py) → Download CMIP6 monthly data via intake-esm
-* [get_6h_url.py](Download_CMIP6/get_6h_url.py) → Get 6-hourly data URLs
-
-### [get_era5_data/](get_era5_data/)
-
-Scripts for downloading ERA5 reanalysis data:
-
-* [GetERA5.py](get_era5_data/GetERA5.py) → Download ERA5 pressure level and single level data
-* [download.sh](get_era5_data/download.sh) → Shell script for batch ERA5 download
-
-### [Run_WRF/](Run_WRF/)
-
-WRF execution and analysis notebooks:
-
-* [Run_WRF.ipynb](Run_WRF/Run_WRF.ipynb) → Standard WRF run
-* [Run_PGW.ipynb](Run_WRF/Run_PGW.ipynb) → PGW experiment run
-* [PlotT2diff.ipynb](Run_WRF/PlotT2diff.ipynb) → Visualize temperature differences
-* [namelist/](Run_WRF/namelist/) → WRF and WPS configuration files
-
 ## Requirements
 
 ### OS
@@ -67,31 +35,50 @@ We reccomend to use [anaconda](https://www.anaconda.com/) because this script ne
 
 If you don't have anaconda, you will see [Installing Miniconda](https://www.anaconda.com/docs/getting-started/miniconda/install#linux-terminal-installer)
 
-
-This program uses the following libraries.
-
-- [gcsfs](https://gcsfs.readthedocs.io/en/latest/)
-- [intake-esm](https://intake-esm.readthedocs.io/en/stable/)
-- [xesmf](https://xesmf.readthedocs.io/en/latest/index.html)
-- [wrf-python](https://wrf-python.readthedocs.io/en/latest/)
-- [cartopy](https://scitools.org.uk/cartopy/docs/latest/)
-- [pywinter](https://pywinter.readthedocs.io/en/latest/)
-
-More details in [Requirements.md](Requirements.md)
-
-## Requirements
-Details in [Requirements.md](./Requirements.md)
-
 0. Install WRF and download WPS_GEOG:
 
 * [WRF](https://www.mmm.ucar.edu/weather-research-and-forecasting-model)
 * [WPS_GEOG](https://www2.mmm.ucar.edu/wrf/users/download/get_sources_wps_geog.html)
 
+
 1. It is easy if you use conda. From the base directory, which contains `environment.yml`, run
+
+Details in [Requirements.md](./Requirements.md)
 
 ```bash
 conda env create -f environment.yml
 ```
+
+## Repository Structure
+
+### Root
+
+* [README.md](README.md) → Overview & usage
+* [environment.yml](environment.yml) → Python dependencies
+* [create_pgw_wps_interm.py](create_pgw_wps_interm.py) → Add PGW delta to WPS intermediate files
+
+### Download_CMIP6/
+
+Scripts for downloading CMIP6 GCM data:
+
+* [download_pgw.py](Download_CMIP6/download_pgw.py) → Download CMIP6 monthly data via intake-esm
+* [get_6h_url.py](Download_CMIP6/get_6h_url.py) → Get 6-hourly data URLs
+
+### get_era5_data/
+
+Scripts for downloading ERA5 reanalysis data:
+
+* [GetERA5.py](get_era5_data/GetERA5.py) → Download ERA5 pressure level and single level data
+* [download.sh](get_era5_data/download.sh) → Shell script for batch ERA5 download
+
+### Run_WRF/
+
+WRF execution and analysis notebooks:
+
+* [Run_WRF.ipynb](Run_WRF/Run_WRF.ipynb) → Standard WRF run
+* [Run_PGW.ipynb](Run_WRF/Run_PGW.ipynb) → PGW experiment run
+* [PlotT2diff.ipynb](Run_WRF/PlotT2diff.ipynb) → Visualize temperature differences
+* [namelist/](Run_WRF/namelist/) → WRF and WPS configuration files
 
 
 ## Workflow
@@ -150,14 +137,18 @@ Then run:
 python create_pgw_wps_interm.py
 ```
 
-### 3. Run other WRF steps (e.g., `metgrid.exe`) as usual.
+### 3. Run other WRF steps as usual.
+- run `metgrid.exe`, `real.exe`, `wrf.exe`
 
- **Test run with WRF**
+### Test run with WRF
 
-In [Run_WRF/](Run_WRF/)
+In Run_WRF/
 
-* [Run_WRF.ipynb](Run_WRF/Run_WRF.ipynb)
-* [Run_PGW.ipynb](Run_WRF/Run_PGW.ipynb)
+- Edit `Run_WRF/namelist/namelist.wps`, `Run_WRF/namelist/namelist.input`, and `Run_WRF/namelist/GEOGRID.TBL` for your domain, timing, and physics setup.
+- Run [Run_WRF.ipynb](Run_WRF/Run_WRF.ipynb) to execute the control simulation (standard WPS/WRF flow).
+- Run `python create_pgw_wps_interm.py` to generate PGW-modified WPS intermediate files.
+- Run [Run_PGW.ipynb](Run_WRF/Run_PGW.ipynb) to execute the PGW-DS simulation using PGW-modified inputs.
+- Compare control vs PGW-DS outputs with [PlotT2diff.ipynb](Run_WRF/PlotT2diff.ipynb) if needed.
 
 ---
 
