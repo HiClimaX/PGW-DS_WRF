@@ -1,4 +1,19 @@
-"""Create PGW WRF intermediate files"""
+"""
+Create PGW-modified WPS intermediate files (WPS "ungrib" output).
+
+Usage
+-----
+1) Edit the `CONFIG` block (paths, periods, models, experiment).
+2) Run:
+    python create_pgw_wps_interm.py
+
+Notes
+-----
+- `src_dir` must contain files matching `{wps_inter_prefix}:*`.
+- CMIP6 monthly NetCDFs are expected under:
+    {download_dir}/{source_id}/historical/*.nc  (present)
+    {download_dir}/{source_id}/{experiment}/*.nc (future)
+"""
 
 # %%
 import logging

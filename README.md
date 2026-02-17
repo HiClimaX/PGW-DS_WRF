@@ -43,11 +43,11 @@ If you don't have anaconda, you will see [Installing Miniconda](https://www.anac
 
 1. It is easy if you use conda. From the base directory, which contains `environment.yml`, run
 
-Details in [Requirements.md](./Requirements.md)
-
 ```bash
 conda env create -f environment.yml
 ```
+Details in [Requirements.md](./Requirements.md)
+
 
 ## Repository Structure
 
@@ -83,70 +83,51 @@ WRF execution and analysis notebooks:
 
 ## Workflow
 
-### 1. Download CMIP6 GCM monthly data
 
-See [Download_CMIP6/download_pgw.py](Download_CMIP6/download_pgw.py)
+1. **Download CMIP6 monthly data** (PGW deltas source)  
+   Run `Download_CMIP6/download_pgw.py` to populate `Download_CMIP6/Download/`.
+   ```bash
+   cd Download_CMIP6
+   python download_pgw.py
+   ```
 
-```bash
-cd Download_CMIP6
-python download_pgw.py
-```
+2. **Prepare reanalysis forcing (ERA5) and WPS intermediates**  
+   Download ERA5 GRIBs with `get_era5_data/download.sh` (configure dates/area/output first).
+   ```bash
+   cd get_era5_data
+   ./download.sh
+   ```
+   Run WPS `ungrib.exe` to produce intermediate files like `ERA5:YYYY-MM-DD_HH` (prefix comes from `namelist.wps`).
+   ```bash
+   ./ungrib.exe
+   ```
 
-### 2. Create WPS intermediate files
+3. **Apply PGW deltas to WPS intermediate files**  
+   Run `create_pgw_wps_interm.py` to write PGW-modified intermediates to your output directory.
+   ```bash
+   python create_pgw_wps_interm.py
+   ```
 
-We have tested for ERA5 pressure levels data.
+4. **Run WRF as usual**  
+   Continue with `metgrid.exe`, `real.exe`, `wrf.exe`.
+   ```bash
+   ./metgrid.exe
+   ./real.exe
+   ./wrf.exe
+   ```
 
-The steps are:
+See usage details at the top of each script: [Download_CMIP6/download_pgw.py](./Download_CMIP6/download_pgw.py), [get_era5_data/download.sh](./get_era5_data/download.sh), and [create_pgw_wps_interm.py](./create_pgw_wps_interm.py).
 
-1. Download ERA5 data. See [get_era5_data/GetERA5.py](get_era5_data/GetERA5.py)
+### Test run
 
-Before running the download script, edit [get_era5_data/download.sh](get_era5_data/download.sh) to configure your region and time period. The following parameters need to be modified:
-
-- `DATADIR`: Output directory for downloaded data
-- `DATE1`: Start date (YYYYMMDD format)
-- `DATE2`: End date (YYYYMMDD format)
-- `Nort`, `West`, `Sout`, `East`: Geographic boundaries (North, West, South, East latitudes/longitudes)
-
-Then run:
-
-```bash
-cd get_era5_data
-./download.sh
-```
-
-2. Use WPS to ungrib the grib file. You should get a bunch of files with names
-similar to `FILE:2000-01-10_19` or `ERA5:2000-01-10_19`. The prefix (`FILE` or
-`ERA5`) can be set in the [namelist.wps](Run_WRF/namelist/namelist.wps) file. We use the ERA5 prefix.
-
-3. Run the script to add PGW delta to variables in WPS intermediate files. See [create_pgw_wps_interm.py](create_pgw_wps_interm.py)
-
-Before running, edit the `CONFIG` block in [create_pgw_wps_interm.py](create_pgw_wps_interm.py#L29-L46) to match your paths and periods. Key fields:
-
-- `src_dir`: Directory containing WPS intermediate files (e.g., ERA5:YYYY-MM-DD_HH)
-- `dst_dir`: Output directory for PGW-applied files
-- `wps_inter_prefix`: Prefix used in the intermediate file names (e.g., ERA5)
-- `cache_file`: Cache NetCDF file name (set to empty or None to disable)
-- `present`, `future`: Periods used for delta calculation
-- `source_ids`: CMIP6 models used to compute deltas
-- `experiment`: CMIP6 experiment name (e.g., ssp585)
-- `download_dir`: CMIP6 download root directory
-
-Then run:
-
-```bash
-python create_pgw_wps_interm.py
-```
-
-### 3. Run other WRF steps as usual.
-- run `metgrid.exe`, `real.exe`, `wrf.exe`
-
-### Test run with WRF
-
-In Run_WRF/
+We provide scripts to run PGW experiments easily in [Run_WRF/](./Run_WRF/).
 
 - Edit `Run_WRF/namelist/namelist.wps`, `Run_WRF/namelist/namelist.input`, and `Run_WRF/namelist/GEOGRID.TBL` for your domain, timing, and physics setup.
 - Run [Run_WRF.ipynb](Run_WRF/Run_WRF.ipynb) to execute the control simulation (standard WPS/WRF flow).
-- Run `python create_pgw_wps_interm.py` to generate PGW-modified WPS intermediate files.
+- Run `create_pgw_wps_interm.py` to generate PGW-modified WPS intermediate files.
+  ```bash
+  python create_pgw_wps_interm.py
+  ```
 - Run [Run_PGW.ipynb](Run_WRF/Run_PGW.ipynb) to execute the PGW-DS simulation using PGW-modified inputs.
 - Compare control vs PGW-DS outputs with [PlotT2diff.ipynb](Run_WRF/PlotT2diff.ipynb) if needed.
 

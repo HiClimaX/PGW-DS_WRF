@@ -2,24 +2,26 @@
 
 set -eou pipefail
 
-DATADIR=data/
-
-# DATE1=20170419
-# DATE2=20170419
-# Nort=60
-# West=80
-# Sout=15
-# East=150
+# Usage:
+#   cd get_era5_data
+#   ./download.sh
+#
+# Configure:
+#   - DATADIR, DATE1, DATE2
+#   - Nort, West, Sout, East (area bounds)
+#
+# Output:
+#   $DATADIR/<YYYY>/ERA5-<YYYYMMDD>-<sl|pl>.grib
 
 # Please set the following variables:
 # Japan
-DATADIR=data/japan/
-DATE1=20231231
-DATE2=20241231
-Nort=50
-West=125
-Sout=25
-East=150
+DATADIR="$REANAL/era5/japan/"
+DATE1=20110801
+DATE2=20110831
+Nort=55
+West=110
+Sout=20
+East=155
 
 # Generate list of dates
 dates=()
