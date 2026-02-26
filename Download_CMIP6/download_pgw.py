@@ -10,6 +10,7 @@
 
 # %%
 import concurrent.futures
+import os
 from pathlib import Path
 
 import intake
@@ -139,6 +140,7 @@ def download_files(
 
 # %%
 def download_data(
+    download_dir: Path,
     source_ids: list[str],
     experiments: list[str],
     variables: list[str],
@@ -155,6 +157,7 @@ def download_data(
                 for var in variables:
                     future = executor.submit(
                         download_files,
+                        download_dir,
                         PANGEO_CATALOG_URL,
                         sid,
                         exp,
@@ -198,11 +201,11 @@ if __name__ == "__main__":
     variables = ["tas", "ta", "ua", "va", "hur", "zg", "ts"]
     historical_period = (1995, 2014)
     ssp_period = (2045, 2064)
-    download_dir = Path("data")
+    download_dir = Path(os.getenv("CMIP6"))
     download_dir.mkdir(parents=True, exist_ok=True)
 
-    historical_status = download_data(source_ids, ["historical"], variables, *historical_period)
-    ssp_status = download_data(source_ids, experiments, variables, *ssp_period)
+    historical_status = download_data(download_dir, source_ids, ["historical"], variables, *historical_period)
+    ssp_status = download_data(download_dir, source_ids, experiments, variables, *ssp_period)
 
     download_status = pd.concat([historical_status, ssp_status], ignore_index=True)
     print(f"Successfully downloaded {download_status['success'].sum()} files")
