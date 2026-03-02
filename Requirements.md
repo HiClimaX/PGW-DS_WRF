@@ -4,16 +4,16 @@
 
 This program use [WRF](https://github.com/wrf-model/WRF), so we have to do in **Linux**.
 
-- **Python enviroments**
+- **Python environments**
 
-We reccomend to use [anaconda](https://www.anaconda.com/) because this script need a library which can install by conda.
+We recommend to use [anaconda](https://www.anaconda.com/) because this script need a library which can install by conda.
 
 If you don't have anaconda, you will see [Installing Miniconda](https://www.anaconda.com/docs/getting-started/miniconda/install#linux-terminal-installer)
 
-if you finish installing anaconda, you should create enviroment with Python3.10 - 3.12.
+if you finish installing anaconda, you should create environment with Python3.10 - 3.12.
 
 ```bash
-conda create -n pgw-ds Python=3.12
+conda create -n pgw-ds python=3.12
 ```
 ```bash
 conda activate pgw-ds

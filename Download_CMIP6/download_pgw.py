@@ -179,7 +179,7 @@ def download_data(
 ):
     status = []
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         futures = []
         status = []
         for sid in source_ids:
@@ -220,14 +220,14 @@ def download_data(
 if __name__ == "__main__":
     #  Please modify the settings to include the models you want to download
     source_ids = [
-        # "EC-Earth3",
+        "EC-Earth3",
         "MIROC6",
         "MRI-ESM2-0",
         "ACCESS-CM2",
         "IPSL-CM6A-LR",
         "MPI-ESM1-2-HR",
     ]
-    experiments = ['ssp585', 'ssp126', 'ssp370','ssp245']
+    experiments = ['ssp585', 'ssp126', 'ssp370', 'ssp245']
     variables = ["tas", "ta", "ua", "va", "hur", "zg", "ts"]
     # historical_period = (1991, 2014)
     present_period = (1991, 2020)
