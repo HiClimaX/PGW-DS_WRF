@@ -89,14 +89,44 @@ def download_files(
             return True
 
         datasets: dict[str, xr.Dataset] = first_member.to_dataset_dict(
-            xarray_open_kwargs={"consolidated": True}, progressbar=False
+            xarray_open_kwargs={"consolidated": True},
+            storage_options={"asynchronous": False},
+            progressbar=False,
         )
 
-        for key, ds in datasets.items():
-            # Must use isin because some dataset has time variable not monotonically increasing
-            year_data = ds.sel(
-                time=ds.time.dt.year.isin(np.arange(start_year, end_year + 1))
+        use_historical = exp != "historical" and start_year <= 2014 and end_year >= 2015
+        if use_historical:
+            historical_member = catalog.search(
+                experiment_id="historical",
+                table_id="Amon",
+                variable_id=var,
+                source_id=sid,
+                member_id=first_member_id,
             )
+            historical_datasets: dict[str, xr.Dataset] = historical_member.to_dataset_dict(
+                xarray_open_kwargs={"consolidated": True},
+                storage_options={"asynchronous": False},
+                progressbar=False,
+            )
+            historical_by_present_key = {
+                historical_key: historical_ds
+                for historical_key, historical_ds in historical_datasets.items()
+            }
+
+        for i, (key, ds) in enumerate(datasets.items()):
+            # Must use isin because some dataset has time variable not monotonically increasing
+            if use_historical:
+                historical_data = list(historical_by_present_key.values())[i].sel(
+                    time=list(historical_by_present_key.values())[i].time.dt.year.isin(np.arange(start_year, 2014 + 1))
+                )
+                present_data = ds.sel(
+                    time=ds.time.dt.year.isin(np.arange(2015, end_year + 1))
+                )
+                year_data = xr.concat([historical_data, present_data], dim="time").sortby("time")
+            else:
+                year_data = ds.sel(
+                    time=ds.time.dt.year.isin(np.arange(start_year, end_year + 1))
+                )
 
             years = np.unique(year_data.time.dt.year.values)
 
@@ -116,7 +146,7 @@ def download_files(
             month_mean = year_data.groupby("time.month").mean("time").squeeze(drop=True)
 
             ofile = output_file_name(key)
-            tmp_ofile = ofile.with_suffix(".tmp.nc")
+            tmp_ofile = ofile.with_suffix(ofile.suffix + ".tmp")
 
             # Save to temporary file first, and then rename to output file to
             # avoid regarding corrupted file due to sudden termination as
@@ -149,7 +179,7 @@ def download_data(
 ):
     status = []
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
         futures = []
         status = []
         for sid in source_ids:
@@ -190,24 +220,26 @@ def download_data(
 if __name__ == "__main__":
     #  Please modify the settings to include the models you want to download
     source_ids = [
-        "EC-Earth3",
+        # "EC-Earth3",
         "MIROC6",
         "MRI-ESM2-0",
         "ACCESS-CM2",
         "IPSL-CM6A-LR",
         "MPI-ESM1-2-HR",
     ]
-    experiments = ['historical','ssp585', 'ssp126', 'ssp370','ssp245']
+    experiments = ['ssp585', 'ssp126', 'ssp370','ssp245']
     variables = ["tas", "ta", "ua", "va", "hur", "zg", "ts"]
-    historical_period = (1995, 2014)
-    ssp_period = (2045, 2064)
+    # historical_period = (1991, 2014)
+    present_period = (1991, 2020)
+    ssp_period = (2071, 2100)
     download_dir = Path(os.getenv("CMIP6"))
     download_dir.mkdir(parents=True, exist_ok=True)
 
-    historical_status = download_data(download_dir, source_ids, ["historical"], variables, *historical_period)
+    # historical_status = download_data(download_dir, source_ids, ["historical"], variables, *historical_period)
+    present_status = download_data(download_dir, source_ids, experiments, variables, *present_period)
     ssp_status = download_data(download_dir, source_ids, experiments, variables, *ssp_period)
 
-    download_status = pd.concat([historical_status, ssp_status], ignore_index=True)
+    download_status = pd.concat([present_status, ssp_status], ignore_index=True)
     print(f"Successfully downloaded {download_status['success'].sum()} files")
 
     failed_download = download_status.query("~success")

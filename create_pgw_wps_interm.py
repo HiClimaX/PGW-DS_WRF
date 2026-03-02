@@ -17,6 +17,7 @@ Notes
 
 # %%
 import logging
+import os
 from pathlib import Path
 
 import numpy as np
@@ -46,8 +47,8 @@ CONFIG = {
     "dst_dir": "/data7/khanhdn/wrf/WPS/runs/era5_test_pgw/",
     "wps_inter_prefix": "ERA5",
     "cache_file": "era5_cache.nc",
-    "present": "1995-2014",
-    "future": "2045-2064",
+    "present": "1991-2020",
+    "future": "2071-2100",
     "source_ids": [
         "EC-Earth3",
         "MIROC6",
@@ -102,6 +103,7 @@ def calculate_deltas(
     download_dir,
     variables=["ta", "ua", "va", "hur", "zg", "ts"],
 ) -> xr.Dataset:
+    present_start, present_end = map(int, present.split("-"))
     present = present.replace("-", "_")
     future = future.replace("-", "_")
 
@@ -114,7 +116,10 @@ def calculate_deltas(
         for source_id in source_ids:
             pbar.set_postfix_str(f"{variable}, {source_id}")
 
-            present_dir = download_dir / source_id / "historical"
+            if present_start <= 2014 < present_end:
+                present_dir = download_dir / source_id / experiment
+            else:
+                present_dir = download_dir / source_id / "historical"
             (present_file,) = present_dir.glob(f"{variable}_*{present}.nc")
             present_ds = xr.open_dataset(present_file)[variable]
 
@@ -194,7 +199,7 @@ def apply_pgw_delta(wps_inter_filepath, deltas, dst_dir, var_map):
         fields.append(field)
 
     _logger.info(f"Writing to {dst_dir}/{prefix}_{date}")
-    pyw.cinter(prefix, date, geoinfo, fields, dst_dir)
+    pyw.cinter(prefix, date, geoinfo, fields, str(dst_dir))
 
 
 # %%
@@ -239,19 +244,20 @@ def get_or_calculate_deltas(
     """
     Function to handle cache file existence, validation, calculation, and saving.
     """
+    recalculate = True
+
     if cache_file is not None and Path(cache_file).exists():
         _logger.info(f"Reading cache file {cache_file}")
         deltas = xr.open_dataset(cache_file)
-        if not verify_metadata(metadata, deltas.attrs):
-            message = (
-                "Cache metadata mismatch. "
-                "Maybe the cache file was created with "
-                "different parameters (e.g., GCMs, experiment, years)."
-            )
-            _logger.critical(message + f"\nExpected: {metadata}\nActual: {deltas.attrs}")
-            raise RuntimeError(message)
-        _logger.info("Cache file read successfully")
-    else:
+        if verify_metadata(metadata, deltas.attrs):
+            _logger.info("Cache file read successfully")
+            recalculate = False
+        else:
+            _logger.warning("Cache metadata mismatch. Remove cache and recalculate.")
+            deltas.close()
+            Path(cache_file).unlink()
+
+    if recalculate:
         _logger.info("Calculating deltas")
         deltas = calculate_deltas(
             ds_target,
@@ -262,8 +268,7 @@ def get_or_calculate_deltas(
             future,
             download_dir,
         )
-        # Write cache if the cache file does not exist
-        if cache_file is not None and not Path(cache_file).exists():
+        if cache_file is not None:
             _logger.info(f"Writing cache file {cache_file}")
             deltas.attrs.update(metadata)
             deltas.to_netcdf(
