@@ -84,13 +84,10 @@ def download_files(
         return odir / f"{var}_{key}_{first_member_id}_{start_year}_{end_year}.nc"
 
     try:
-        # If all output files exist, skip
-        if all((output_file_name(key)).exists() for key in first_member.keys()):
-            return True
-
+        time_coder = xr.coders.CFDatetimeCoder(use_cftime=True)
         datasets: dict[str, xr.Dataset] = first_member.to_dataset_dict(
-            xarray_open_kwargs={"consolidated": True},
-            storage_options={"asynchronous": False},
+            zarr_kwargs={'consolidated': True},
+            xarray_open_kwargs={"decode_times": time_coder},
             progressbar=False,
         )
 
@@ -104,8 +101,8 @@ def download_files(
                 member_id=first_member_id,
             )
             historical_datasets: dict[str, xr.Dataset] = historical_member.to_dataset_dict(
-                xarray_open_kwargs={"consolidated": True},
-                storage_options={"asynchronous": False},
+                zarr_kwargs={'consolidated': True},
+                xarray_open_kwargs={"decode_times": time_coder},
                 progressbar=False,
             )
             historical_by_present_key = {
@@ -152,7 +149,7 @@ def download_files(
             # avoid regarding corrupted file due to sudden termination as
             # complete file.
             util.to_netcdf(month_mean, tmp_ofile)
-            tmp_ofile.rename(ofile)
+            os.replace(tmp_ofile, ofile)
 
     except Exception as e:
         print("*** Couldn't download", var, exp, sid, e)
@@ -179,12 +176,28 @@ def download_data(
 ):
     status = []
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
         futures = []
-        status = []
+        queued_status = []
         for sid in source_ids:
             for exp in experiments:
                 for var in variables:
+                    search_dir = download_dir / sid / exp
+                    existing_files = list(
+                        search_dir.glob(f"{var}_*_{start_year}_{end_year}.nc")
+                    ) if search_dir.exists() else []
+
+                    if len(existing_files) > 0:
+                        status.append(
+                            {
+                                "source_id": sid,
+                                "experiment": exp,
+                                "variable": var,
+                                "success": True,
+                            }
+                        )
+                        continue
+
                     future = executor.submit(
                         download_files,
                         download_dir,
@@ -196,7 +209,7 @@ def download_data(
                         end_year,
                     )
                     futures.append(future)
-                    status.append(
+                    queued_status.append(
                         {
                             "source_id": sid,
                             "experiment": exp,
@@ -204,7 +217,7 @@ def download_data(
                         }
                     )
 
-        for future, stat in tqdm(zip(futures, status), total=len(futures)):
+        for future, stat in tqdm(zip(futures, queued_status), total=len(futures)):
             try:
                 success = future.result()
             except Exception as e:
@@ -212,6 +225,7 @@ def download_data(
                 print("*** Error:", e)
 
             stat["success"] = success
+            status.append(stat)
 
     return pd.DataFrame(status)
 
