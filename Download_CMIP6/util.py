@@ -5,9 +5,9 @@ from typing import Iterable
 import netcdf_util
 import xarray as xr
 
-PANGEO_CATALOG_URL = "https://storage.googleapis.com/cmip6/pangeo-cmip6.json"
+# PANGEO_CATALOG_URL = "https://storage.googleapis.com/cmip6/pangeo-cmip6.json"
 # GLADE_CATALOG_URL = "https://raw.githubusercontent.com/NCAR/intake-esm-datastore/refs/heads/main/catalogs/glade-cmip6.json"
-
+PANGEO_CATALOG_URL = "https://raw.githubusercontent.com/NCAR/intake-esm-datastore/master/catalogs/pangeo-cmip6.json"
 
 def natural_sort(arr: Iterable[str], /) -> list[str]:
     """
