@@ -1,4 +1,4 @@
-# PGW-DS\_WRF
+# PGW-DS_WRF
 
 **Pseudo-Global-Warming (PGW) downscaling using WRF**
 
@@ -23,6 +23,31 @@ This repository includes:
 * Post-processing and visualization scripts.
 * Sample datasets and outputs for testing.
 
+## Requirements
+
+### OS
+
+This program use [WRF](https://github.com/wrf-model/WRF), so we have to do in **Linux**.
+
+### Python environments
+
+We recommend to use [anaconda](https://www.anaconda.com/) because this script need a library which can install by conda.
+
+If you don't have anaconda, you will see [Installing Miniconda](https://www.anaconda.com/docs/getting-started/miniconda/install#linux-terminal-installer)
+
+0. Install WRF and download WPS_GEOG:
+
+* [WRF](https://www.mmm.ucar.edu/weather-research-and-forecasting-model)
+* [WPS_GEOG](https://www2.mmm.ucar.edu/wrf/users/download/get_sources_wps_geog.html)
+
+
+1. It is easy if you use conda. From the base directory, which contains `environment.yml`, run
+
+```bash
+conda env create -f environment.yml
+```
+Details in [Requirements.md](./Requirements.md)
+
 
 ## Repository Structure
 
@@ -32,21 +57,21 @@ This repository includes:
 * [environment.yml](environment.yml) → Python dependencies
 * [create_pgw_wps_interm.py](create_pgw_wps_interm.py) → Add PGW delta to WPS intermediate files
 
-### [Download_CMIP6/](Download_CMIP6/)
+### Download_CMIP6/
 
 Scripts for downloading CMIP6 GCM data:
 
 * [download_pgw.py](Download_CMIP6/download_pgw.py) → Download CMIP6 monthly data via intake-esm
 * [get_6h_url.py](Download_CMIP6/get_6h_url.py) → Get 6-hourly data URLs
 
-### [get_era5_data/](get_era5_data/)
+### get_era5_data/
 
 Scripts for downloading ERA5 reanalysis data:
 
 * [GetERA5.py](get_era5_data/GetERA5.py) → Download ERA5 pressure level and single level data
 * [download.sh](get_era5_data/download.sh) → Shell script for batch ERA5 download
 
-### [Run_WRF/](Run_WRF/)
+### Run_WRF/
 
 WRF execution and analysis notebooks:
 
@@ -56,61 +81,55 @@ WRF execution and analysis notebooks:
 * [namelist/](Run_WRF/namelist/) → WRF and WPS configuration files
 
 
-## Requirements
-
-0. Install WRF and download WPS_GEOG:
-
-* [WRF](https://www.mmm.ucar.edu/weather-research-and-forecasting-model)
-* [WPS_GEOG](https://www2.mmm.ucar.edu/wrf/users/download/get_sources_wps_geog.html)
-
-1. It is easy if you use conda. From the base directory, which contains `environment.yml`, run
-
-```bash
-conda env create -f environment.yml
-```
-
-
 ## Workflow
 
-### 1. Download CMIP6 GCM monthly data
 
-See [Download_CMIP6/download_pgw.py](Download_CMIP6/download_pgw.py)
+1. **Download CMIP6 monthly data** (PGW deltas source)  
+   Run `Download_CMIP6/download_pgw.py` to populate `Download_CMIP6/Download/`.
+   ```bash
+   cd Download_CMIP6
+   python download_pgw.py
+   ```
 
-```bash
-cd Download_CMIP6
-python download_pgw.py
-```
+2. **Prepare reanalysis forcing (ERA5) and WPS intermediates**  
+   Download ERA5 GRIBs with `get_era5_data/download.sh` (configure dates/area/output first).
+   ```bash
+   cd get_era5_data
+   ./download.sh
+   ```
+   Run WPS `ungrib.exe` to produce intermediate files like `ERA5:YYYY-MM-DD_HH` (prefix comes from `namelist.wps`).
+   ```bash
+   ./ungrib.exe
+   ```
 
-### 2. Create WPS intermediate files
+3. **Apply PGW deltas to WPS intermediate files**  
+   Run `create_pgw_wps_interm.py` to write PGW-modified intermediates to your output directory.
+   ```bash
+   python create_pgw_wps_interm.py
+   ```
 
-We have tested for ERA5 pressure levels data.
+4. **Run WRF as usual**  
+   Continue with `metgrid.exe`, `real.exe`, `wrf.exe`.
+   ```bash
+   ./metgrid.exe
+   ./real.exe
+   ./wrf.exe
+   ```
 
-The steps are:
+See usage details at the top of each script: [Download_CMIP6/download_pgw.py](./Download_CMIP6/download_pgw.py), [get_era5_data/download.sh](./get_era5_data/download.sh), and [create_pgw_wps_interm.py](./create_pgw_wps_interm.py).
 
-1. Download ERA5 data. See [get_era5_data/GetERA5.py](get_era5_data/GetERA5.py)
-```bash
-cd get_era5_data
-./download.sh
-```
-Modify the script accordingly for your region of interest.
+### Test run
 
-2. Use WPS to ungrib the grib file. You should get a bunch of files with names
-similar to `FILE:2000-01-10_19` or `ERA5:2000-01-10_19`. The prefix (`FILE` or
-`ERA5`) can be set in the [namelist.wps](Run_WRF/namelist/namelist.wps) file. We use the ERA5 prefix.
+We provide scripts to run PGW experiments easily in [Run_WRF/](./Run_WRF/).
 
-3. Run the script to add PGW delta to variables in WPS intermediate files. See [create_pgw_wps_interm.py](create_pgw_wps_interm.py)
-```bash
-python create_pgw_wps_interm.py
-```
-
-### 3. Run other WRF steps (e.g., `metgrid.exe`) as usual.
-
- **Test run with WRF**
-
-In [Run_WRF/](Run_WRF/)
-
-* [Run_WRF.ipynb](Run_WRF/Run_WRF.ipynb)
-* [Run_PGW.ipynb](Run_WRF/Run_PGW.ipynb)
+- Edit `Run_WRF/namelist/namelist.wps`, `Run_WRF/namelist/namelist.input`, and `Run_WRF/namelist/GEOGRID.TBL` for your domain, timing, and physics setup.
+- Run [Run_WRF.ipynb](Run_WRF/Run_WRF.ipynb) to execute the control simulation (standard WPS/WRF flow).
+- Run `create_pgw_wps_interm.py` to generate PGW-modified WPS intermediate files.
+  ```bash
+  python create_pgw_wps_interm.py
+  ```
+- Run [Run_PGW.ipynb](Run_WRF/Run_PGW.ipynb) to execute the PGW-DS simulation using PGW-modified inputs.
+- Compare control vs PGW-DS outputs with [PlotT2diff.ipynb](Run_WRF/PlotT2diff.ipynb) if needed.
 
 ---
 

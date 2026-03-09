@@ -2,23 +2,26 @@
 
 set -eou pipefail
 
-DATADIR=data/
+# Usage:
+#   cd get_era5_data
+#   ./download.sh
+#
+# Configure:
+#   - DATADIR, DATE1, DATE2
+#   - North, West, South, East (area bounds)
+#
+# Output:
+#   $DATADIR/<YYYY>/ERA5-<YYYYMMDD>-<sl|pl>.grib
 
-# DATE1=20170419
-# DATE2=20170419
-# Nort=60
-# West=80
-# Sout=15
-# East=150
-
+# Please set the following variables:
 # Japan
-DATADIR=data/japan/
-DATE1=20231231
-DATE2=20241231
-Nort=50
-West=125
-Sout=25
-East=150
+DATADIR="$REANAL/era5/japan/"
+DATE1=20110801
+DATE2=20110831
+North=55
+West=110
+South=20
+East=155
 
 # Generate list of dates
 dates=()
@@ -34,5 +37,5 @@ done
 echo "Dates:" "${dates[@]}"
 
 parallel -j 2 --bar --plus \
-    python GetERA5.py '{1}' '{2}' --area "$Nort,$West,$Sout,$East" --output-file "$DATADIR/{2:0:4}/ERA5-{2}-{1}.grib" \
+    python GetERA5.py '{1}' '{2}' --area "$North,$West,$South,$East" --output-file "$DATADIR/{2:0:4}/ERA5-{2}-{1}.grib" \
     ::: sl pl ::: "${dates[@]}"

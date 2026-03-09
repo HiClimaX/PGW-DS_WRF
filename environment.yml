@@ -13,6 +13,7 @@ dependencies:
   - ipykernel
   - ipywidgets
   - intake-esm
+  - apsw>=3.47
   - requests
   - aiohttp
   - matplotlib

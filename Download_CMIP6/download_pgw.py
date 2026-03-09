@@ -10,6 +10,7 @@
 
 # %%
 import concurrent.futures
+import os
 from pathlib import Path
 
 import intake
@@ -23,11 +24,12 @@ from util import PANGEO_CATALOG_URL
 
 # %%
 def download_files(
-    catalog_url: str, sid: str, exp: str, var: str, start_year: int, end_year: int
+    download_dir: Path, catalog_url: str, sid: str, exp: str, var: str, start_year: int, end_year: int
 ):
     """
     Download files from the CMIP6 data store
 
+    :param download_dir: directory to save downloaded files
     :param catalog_url: intake esm data store
     :param sid: source_id
     :param exp: experiment_id
@@ -75,26 +77,53 @@ def download_files(
         )
         return False
 
-    odir = Path("Download") / sid / exp
+    odir = download_dir / sid / exp
     odir.mkdir(parents=True, exist_ok=True)
 
     def output_file_name(key):
         return odir / f"{var}_{key}_{first_member_id}_{start_year}_{end_year}.nc"
 
     try:
-        # If all output files exist, skip
-        if all((output_file_name(key)).exists() for key in first_member.keys()):
-            return True
-
+        time_coder = xr.coders.CFDatetimeCoder(use_cftime=True)
         datasets: dict[str, xr.Dataset] = first_member.to_dataset_dict(
-            xarray_open_kwargs={"consolidated": True}, progressbar=False
+            zarr_kwargs={'consolidated': True},
+            xarray_open_kwargs={"decode_times": time_coder},
+            progressbar=False,
         )
 
-        for key, ds in datasets.items():
-            # Must use isin because some dataset has time variable not monotonically increasing
-            year_data = ds.sel(
-                time=ds.time.dt.year.isin(np.arange(start_year, end_year + 1))
+        use_historical = exp != "historical" and start_year <= 2014 and end_year >= 2015
+        if use_historical:
+            historical_member = catalog.search(
+                experiment_id="historical",
+                table_id="Amon",
+                variable_id=var,
+                source_id=sid,
+                member_id=first_member_id,
             )
+            historical_datasets: dict[str, xr.Dataset] = historical_member.to_dataset_dict(
+                zarr_kwargs={'consolidated': True},
+                xarray_open_kwargs={"decode_times": time_coder},
+                progressbar=False,
+            )
+            historical_by_present_key = {
+                historical_key: historical_ds
+                for historical_key, historical_ds in historical_datasets.items()
+            }
+
+        for i, (key, ds) in enumerate(datasets.items()):
+            # Must use isin because some dataset has time variable not monotonically increasing
+            if use_historical:
+                historical_data = list(historical_by_present_key.values())[i].sel(
+                    time=list(historical_by_present_key.values())[i].time.dt.year.isin(np.arange(start_year, 2014 + 1))
+                )
+                present_data = ds.sel(
+                    time=ds.time.dt.year.isin(np.arange(2015, end_year + 1))
+                )
+                year_data = xr.concat([historical_data, present_data], dim="time").sortby("time")
+            else:
+                year_data = ds.sel(
+                    time=ds.time.dt.year.isin(np.arange(start_year, end_year + 1))
+                )
 
             years = np.unique(year_data.time.dt.year.values)
 
@@ -114,13 +143,13 @@ def download_files(
             month_mean = year_data.groupby("time.month").mean("time").squeeze(drop=True)
 
             ofile = output_file_name(key)
-            tmp_ofile = ofile.with_suffix(".tmp.nc")
+            tmp_ofile = ofile.with_suffix(ofile.suffix + ".tmp")
 
             # Save to temporary file first, and then rename to output file to
             # avoid regarding corrupted file due to sudden termination as
             # complete file.
             util.to_netcdf(month_mean, tmp_ofile)
-            tmp_ofile.rename(ofile)
+            os.replace(tmp_ofile, ofile)
 
     except Exception as e:
         print("*** Couldn't download", var, exp, sid, e)
@@ -138,6 +167,7 @@ def download_files(
 
 # %%
 def download_data(
+    download_dir: Path,
     source_ids: list[str],
     experiments: list[str],
     variables: list[str],
@@ -146,14 +176,31 @@ def download_data(
 ):
     status = []
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
         futures = []
-        status = []
+        queued_status = []
         for sid in source_ids:
             for exp in experiments:
                 for var in variables:
+                    search_dir = download_dir / sid / exp
+                    existing_files = list(
+                        search_dir.glob(f"{var}_*_{start_year}_{end_year}.nc")
+                    ) if search_dir.exists() else []
+
+                    if len(existing_files) > 0:
+                        status.append(
+                            {
+                                "source_id": sid,
+                                "experiment": exp,
+                                "variable": var,
+                                "success": True,
+                            }
+                        )
+                        continue
+
                     future = executor.submit(
                         download_files,
+                        download_dir,
                         PANGEO_CATALOG_URL,
                         sid,
                         exp,
@@ -162,7 +209,7 @@ def download_data(
                         end_year,
                     )
                     futures.append(future)
-                    status.append(
+                    queued_status.append(
                         {
                             "source_id": sid,
                             "experiment": exp,
@@ -170,7 +217,7 @@ def download_data(
                         }
                     )
 
-        for future, stat in tqdm(zip(futures, status), total=len(futures)):
+        for future, stat in tqdm(zip(futures, queued_status), total=len(futures)):
             try:
                 success = future.result()
             except Exception as e:
@@ -178,31 +225,40 @@ def download_data(
                 print("*** Error:", e)
 
             stat["success"] = success
+            status.append(stat)
 
     return pd.DataFrame(status)
 
 
 # %%
-source_ids = [
-    "EC-Earth3",
-    "MIROC6",
-    "MRI-ESM2-0",
-    "ACCESS-CM2",
-    "IPSL-CM6A-LR",
-    "MPI-ESM1-2-HR",
-]
-experiments = ["ssp585"]
-variables = ["tas", "ta", "ua", "va", "hur", "zg", "ts"]
+if __name__ == "__main__":
+    #  Please modify the settings to include the models you want to download
+    source_ids = [
+        "EC-Earth3",
+        "MIROC6",
+        "MRI-ESM2-0",
+        "ACCESS-CM2",
+        "IPSL-CM6A-LR",
+        "MPI-ESM1-2-HR",
+    ]
+    experiments = ['ssp585', 'ssp126', 'ssp370', 'ssp245']
+    variables = ["tas", "ta", "ua", "va", "hur", "zg", "ts"]
+    # historical_period = (1991, 2014)
+    present_period = (1991, 2020)
+    ssp_period = (2071, 2100)
+    download_dir = Path(os.getenv("CMIP6"))
+    download_dir.mkdir(parents=True, exist_ok=True)
 
-historical_status = download_data(source_ids, ["historical"], variables, 1995, 2014)
-ssp_status = download_data(source_ids, experiments, variables, 2045, 2064)
+    # historical_status = download_data(download_dir, source_ids, ["historical"], variables, *historical_period)
+    present_status = download_data(download_dir, source_ids, experiments, variables, *present_period)
+    ssp_status = download_data(download_dir, source_ids, experiments, variables, *ssp_period)
 
-download_status = pd.concat([historical_status, ssp_status], ignore_index=True)
-print(f"Successfully downloaded {download_status['success'].sum()} files")
+    download_status = pd.concat([present_status, ssp_status], ignore_index=True)
+    print(f"Successfully downloaded {download_status['success'].sum()} files")
 
-failed_download = download_status.query("~success")
-if not failed_download.empty:
-    print("Couldn't download the following files")
-    print(failed_download)
-else:
-    print("No failed download")
+    failed_download = download_status.query("~success")
+    if not failed_download.empty:
+        print("Couldn't download the following files")
+        print(failed_download)
+    else:
+        print("No failed download")
