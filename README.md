@@ -91,24 +91,27 @@ WRF execution and analysis notebooks:
    python download_pgw.py
    ```
 
-2. **Prepare reanalysis forcing (ERA5) and WPS intermediates**  
+2. **Prepare reanalysis forcing (ERA5) and WPS intermediates by running WPS**  
    Download ERA5 GRIBs with `get_era5_data/download.sh` (configure dates/area/output first).
    ```bash
    cd get_era5_data
    ./download.sh
    ```
-   Run WPS `ungrib.exe` to produce intermediate files like `ERA5:YYYY-MM-DD_HH` (prefix comes from `namelist.wps`).
+   Run WPS `geogrid.exe`, `ungrib.exe` to produce intermediate files like `ERA5:YYYY-MM-DD_HH` (prefix comes from `namelist.wps`).
    ```bash
+   ./geogrid.exe
    ./ungrib.exe
    ```
 
 3. **Apply PGW deltas to WPS intermediate files**  
    Run `create_pgw_wps_interm.py` to write PGW-modified intermediates to your output directory.
+   Please fix [CONFIG](./create_pgw_wps_interm.py#L45)
+   
    ```bash
    python create_pgw_wps_interm.py
    ```
 
-4. **Run WRF as usual**  
+5. **Run WRF as usual**  
    Continue with `metgrid.exe`, `real.exe`, `wrf.exe`.
    ```bash
    ./metgrid.exe
